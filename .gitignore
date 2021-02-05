@@ -3,12 +3,29 @@
 /build/
 /vendor/
 /.tools/
-generated/
-api.html
-
 
 *.jar
+
+/bin/
+/tmp/
+/.settings/
+generated/
+
+*.tmp
+*.bak
+*.swp
+*.jar
+
+local.properties
+.loadpath
+.recommenders
 
 !gradle-wrapper.jar
 /run.sh
 *.env
+
+.classpath
+.project
+.settings
+*~
+.*~

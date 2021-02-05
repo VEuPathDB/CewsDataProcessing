@@ -1,0 +1,71 @@
+version: "3.5"
+services:
+  # Definition of a single container in this stack.
+  #
+  # The name "example" will be the address other containers in the stack use to
+  # connect to this service (http://example).
+  #
+  # Each new container in the Docker compose stack will need a service entry.
+  example:
+    # The "build" field tells docker compose how to build the Docker image that
+    # backs this individual service.
+    build:
+      # Context is the root for the docker image to be built, including the
+      # Dockerfile.
+      context: ..
+    # The "environment" field defines a map of environment variables that will
+    # be passed to the service container on startup.
+    #
+    # Fields here that do not have a value provided here will be required on
+    # docker-compose startup.
+    environment:
+      # The port this service will bind to in it's own container.
+      SERVER_PORT: 80
+
+      # A comma separated list of LDAP servers this service should hit to fetch
+      # connection details for the configured database(s).
+      #
+      # Each entry should include address and port (ldap.somehost.com:386).
+      LDAP_SERVER:
+
+      # Base context to use when attempting to resolve the given DB TNS.
+      #
+      # Example: ou=Something,dc=Domain,dc=Component
+      #
+      # The correct value for this can be found in the project wiki page titled
+      # LdapTnsNames.
+      ORACLE_BASE_DN:
+
+      # LDAP Net Service Name for the account database.
+      ACCT_DB_TNS_NAME:
+
+      # Account DB login username
+      ACCT_DB_USER:
+
+      # Account DB login password
+      ACCT_DB_PASS:
+
+    # Configure this service to be accessible via the external traefik network.
+    # See "networks" below.
+    networks:
+      - traefik
+
+    # The labels section defines additional metadata used by ops tooling to
+    # assist in managing this service.
+    #
+    # In these entries "example" would be replaced with a short name or
+    # abbreviation identifying your service.  For example, the dataset accesss
+    # service is "das".
+    labels:
+      - "traefik.http.routers.${TRAEFIK_ROUTER:-example}.rule=Host(`${TRAEFIK_HOST:-example.local.apidb.org}`)"
+      - "traefik.http.routers.${TRAEFIK_ROUTER:-example}.tls=true"
+      - "traefik.http.routers.${TRAEFIK_ROUTER:-example}.entrypoints=local"
+      - "traefik.http.services.${TRAEFIK_ROUTER:-example}.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=${SERVICE_WATCHTOWER:-false}"
+
+
+# This defines the existence of the traefik network external to this
+# docker-compose stack.
+networks:
+  traefik:
+    external: true

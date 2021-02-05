@@ -1,7 +1,7 @@
 //
 // Version Numbers
 //
-val coreLib = "2.7.0" // Container core lib version
+val coreLib = "4.2.2" // Container core lib version
 
 val jersey  = "2.+"   // Jersey/JaxRS version
 val jackson = "2.+"   // FasterXML Jackson version
@@ -51,10 +51,8 @@ dependencies {
     "vendor/xstreams.jar"
   ))
 
-
   // Core lib, prefers local checkout if available
   implementation(findProject(":core") ?: "org.veupathdb.lib:jaxrs-container-core:${coreLib}")
-
 
   // Jersey
   implementation("org.glassfish.jersey.containers:jersey-container-grizzly2-http:${jersey}")

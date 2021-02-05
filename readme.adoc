@@ -13,6 +13,12 @@ endif::[]
 Elizabeth Paige Harper <epharper@upenn.edu>
 v1.0.0
 
+[NOTE]
+This repository is a thin demonstrative wrapper around the
+https://github.com/VEuPathDB/lib-jaxrs-container-core[Core container library],
+for more in depth documentation of available features and config options see
+the core library's readme.
+
 // TODO: Explain the raml-2-jaxrs / raml-2-json-schema / etc.. and any hacks or weirdness that people may need to know when modifying this project.
 
 == Running the Example
@@ -33,8 +39,21 @@ project.
 After the environment has been set up, the project can be built, tested, and
 packaged using `make jar`.
 
-Starting the server can be done by simply running
-`java -jar build/lib/service.jar`.
+Starting the server can be done by running `java -jar build/libs/service.jar`.
+
+[WARNING]
+--
+Most projects will require some CLI or environment arguments to run.  For a full
+listing of available options see the
+https://github.com/VEuPathDB/lib-jaxrs-container-core[core container library]
+documentation.
+--
+
+[NOTE]
+--
+All project specific system level dependencies must be installed locally for
+this to work.
+--
 
 === In Docker
 
@@ -42,12 +61,27 @@ Starting the server can be done by simply running
 
 * Docker
 
+* Docker Compose
+
 ==== Setup & Run
 
 The project container can be built using `make docker`.  The first build
 of the container will take several minutes.
 
-Running the built container can be done with `docker run --rm demo-service`.
+Running the built container can be done with:
+----
+$ docker-compose -f docker/docker-compose.dev.yml up
+----
+
+[WARNING]
+--
+Most projects will require some CLI or environment arguments to run.  For a full
+listing of available options see the
+https://github.com/VEuPathDB/lib-jaxrs-container-core[core container library]
+documentation.  When using docker-compose these options can be
+https://docs.docker.com/compose/environment-variables/[set automatically]
+through the use of a `.env` file.
+--
 
 
 //------------------------------------------------------------------------------
@@ -61,7 +95,7 @@ To use this project as a template for the development of a new service, use the
 === Quick Start
 
 . Clone your new project and cd into the cloned directory
-. Run `make cleanup-example install-dev-env`
+. Run `make install-dev-env cleanup-example`
 . Edit `service.properties` with your service's details.
 . Run `make fix-path` to move the service code to the correct location
 . Edit `api.raml` with your API design
@@ -218,8 +252,8 @@ Once you have implemented the interfaces defined under
 Running your service locally can be done by following the same steps as defined
 above in the <<Running the Example>> section:
 
-. Run `make build-jar`
-. Run `java -jar build/lib/service.jar`
+. Run `make jar`
+. Run `java -jar build/libs/service.jar`
 
 Running in Docker can be done by:
 
@@ -328,6 +362,26 @@ of the make targets and is included as a local, runtime dependency.
 Due to this method of including FgpUtil, additional dependencies have been added
 to support it in addition to bridging compatibility issues.
 
+=== Tunnels and Proxies
+
+When developing or testing a service, you may need to provide that service
+access to resources that cannot be reached without a tunnel or proxy.  This is
+complicated by the fact that Docker containers, by default, will not see those
+resources.
+
+To allow Dockerized services access to these external resources, the running
+container(s) must be given access to the host machine's network.  This can be
+done via `docker run` using the
+https://docs.docker.com/engine/reference/run/#network-settings[network mode "host"]
+or via `docker-compose` by setting the
+https://docs.docker.com/compose/compose-file/compose-file-v3/#network_mode[`network_mode`]
+config option to "host".
+
+Binding the containers to your host machine's network will give the containers
+access to your running tunnels/proxies, but will also mean binding all exposed
+container ports to those ports on your host machine which may cause conflicts.
+
+
 === The project root
 
 The root directory of this project contains multiple standard files used by
@@ -395,6 +449,10 @@ m| service.properties
 [cols=".^2,.^1,5", options="header]
 |===
 | Directory | For | Description
+
+m| docker/
+| Docker/Docker Compose
+| Contains docker-compose configuration files.
 
 m| gradle/
 | Gradle
