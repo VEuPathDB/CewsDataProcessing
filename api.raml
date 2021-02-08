@@ -2,7 +2,7 @@
 
 extends: https://raw.githubusercontent.com/VEuPathDB/docs-api-schema/v2.0.2/libraries/base-service.raml
 
-title: Example JaxRS Container Service
+title: EDA Stream Merging Service API
 version: v1.0.0
 mediaType: application/json
 
@@ -23,32 +23,30 @@ securitySchemes:
           type: string
 
 
-#
-# Example Endpoints
-#
+####################################
+# Endpoints
+####################################
 
-/hello:
-  displayName: Hello World
-  get:
-    responses:
-      200:
-        body:
-          application/json:
-            type: lib.HelloResponse
+/query:
+  displayName: Data Query
   post:
     securedBy: header-auth
     body:
       application/json:
-        type: lib.HelloPostRequest
+        type: lib.MergedEntityTabularPostRequest
     responses:
       200:
         body:
-          application/json:
-            type: lib.HelloPostResponse
-      401:
+          text/plain:
+            type: lib.EntityTabularPostResponse
+      400:
         body:
           application/json:
-            type: error.UnauthorizedError
+            type: error.BadRequestError
+      422:
+        body:
+          application/json:
+            type: error.UnprocessableEntityError
       500:
         body:
           application/json:
