@@ -5,7 +5,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 FROM veupathdb/alpine-dev-base:latest AS prep
 
-LABEL service="eda-merging-service"
+LABEL service="eda-merging-service-build"
 
 WORKDIR /workspace
 RUN jlink --compress=2 --module-path /opt/jdk/jmods \
@@ -45,7 +45,7 @@ RUN mkdir -p vendor \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 FROM foxcapades/alpine-oracle:1.3
 
-LABEL service="demo-service"
+LABEL service="eda-merging-service"
 
 ENV JAVA_HOME=/opt/jdk \
     PATH=/opt/jdk/bin:$PATH

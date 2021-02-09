@@ -2,7 +2,6 @@ package org.veupathdb.service.edams;
 
 import org.veupathdb.lib.container.jaxrs.config.Options;
 import org.veupathdb.lib.container.jaxrs.server.ContainerResources;
-import org.veupathdb.service.edams.service.MergeService;
 
 /**
  * Service Resource Registration.
@@ -47,7 +46,7 @@ public class Resources extends ContainerResources {
   @Override
   protected Object[] resources() {
     return new Object[] {
-      MergeService.class,
+      Service.class,
     };
   }
 }
