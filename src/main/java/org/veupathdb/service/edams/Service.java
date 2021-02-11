@@ -30,7 +30,8 @@ public class Service implements Query {
     try {
       return PostQueryResponse.respond200WithTextPlain(
           new EntityTabularPostResponseStream(
-              StreamMerger.createMergedResponseSupplier(request, Resources.SUBSETTING_SERVICE_URL)));
+              new StreamMerger(request, Resources.SUBSETTING_SERVICE_URL)
+                  .createMergedResponseSupplier()));
     }
     catch (ValidationException e) {
       return PostQueryResponse.respond422WithApplicationJson(toUnprocessableEntityError(e.getValidationBundle()));
