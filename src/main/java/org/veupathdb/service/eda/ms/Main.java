@@ -1,4 +1,4 @@
-package org.veupathdb.service.edams;
+package org.veupathdb.service.eda.ms;
 
 import org.veupathdb.lib.container.jaxrs.config.Options;
 import org.veupathdb.lib.container.jaxrs.server.ContainerResources;

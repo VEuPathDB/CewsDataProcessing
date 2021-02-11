@@ -1,12 +1,12 @@
-package org.veupathdb.service.edams.core;
+package org.veupathdb.service.eda.ms.core;
 
 import java.io.OutputStream;
 import java.util.List;
 import java.util.function.Consumer;
 import org.gusdb.fgputil.validation.ValidationException;
-import org.veupathdb.service.edams.generated.model.DerivedVariable;
-import org.veupathdb.service.edams.generated.model.MergedEntityTabularPostRequest;
-import org.veupathdb.service.edams.generated.model.VariableSpec;
+import org.veupathdb.service.eda.generated.model.DerivedVariable;
+import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
+import org.veupathdb.service.eda.generated.model.VariableSpec;
 
 public class StreamMerger {
 

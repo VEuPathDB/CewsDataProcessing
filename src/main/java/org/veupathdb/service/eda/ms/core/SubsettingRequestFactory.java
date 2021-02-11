@@ -1,7 +1,7 @@
-package org.veupathdb.service.edams.core;
+package org.veupathdb.service.eda.ms.core;
 
 import java.util.List;
-import org.veupathdb.service.edams.generated.model.APIFilter;
+import org.veupathdb.service.eda.generated.model.APIFilter;
 
 public class SubsettingRequestFactory {
 
