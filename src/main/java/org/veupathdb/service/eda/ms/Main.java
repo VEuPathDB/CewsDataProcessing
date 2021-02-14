@@ -1,5 +1,7 @@
 package org.veupathdb.service.eda.ms;
 
+import org.gusdb.fgputil.db.slowquery.QueryLogConfig;
+import org.gusdb.fgputil.db.slowquery.QueryLogger;
 import org.veupathdb.lib.container.jaxrs.config.Options;
 import org.veupathdb.lib.container.jaxrs.server.ContainerResources;
 import org.veupathdb.lib.container.jaxrs.server.Server;
