@@ -8,7 +8,7 @@ import org.gusdb.fgputil.validation.ValidationBundle;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.lib.container.jaxrs.providers.RequestIdProvider;
 import org.veupathdb.lib.container.jaxrs.server.annotations.DisableJackson;
-import org.veupathdb.service.eda.ms.core.StreamMerger;
+import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 import org.veupathdb.service.eda.generated.model.EntityTabularPostResponseStream;
 import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
 import org.veupathdb.service.eda.generated.model.ServerError;
@@ -30,25 +30,25 @@ public class Service implements Query {
     try {
       return PostQueryResponse.respond200WithTextPlain(
           new EntityTabularPostResponseStream(
-              new StreamMerger(request, Resources.SUBSETTING_SERVICE_URL)
+              new MergeRequestProcessor(request)
                   .createMergedResponseSupplier()));
     }
     catch (ValidationException e) {
       return PostQueryResponse.respond422WithApplicationJson(toUnprocessableEntityError(e.getValidationBundle()));
     }
     catch (Exception e) {
-      return PostQueryResponse.respond500WithApplicationJson(toServerError(e));
+      return PostQueryResponse.respond500WithApplicationJson(toServerError(_request, e));
     }
   }
 
-  private ServerError toServerError(Exception e) {
+  private static ServerError toServerError(Request request, Exception e) {
     ServerError errorBundle = new ServerErrorImpl();
     errorBundle.setMessage(e.getMessage());
-    errorBundle.setRequestId(RequestIdProvider.getRequestId(_request));
+    errorBundle.setRequestId(RequestIdProvider.getRequestId(request));
     return errorBundle;
   }
 
-  private UnprocessableEntityError toUnprocessableEntityError(ValidationBundle validationBundle) {
+  private static UnprocessableEntityError toUnprocessableEntityError(ValidationBundle validationBundle) {
     ByKeyType keyedMap = new UnprocessableEntityErrorImpl.ErrorsTypeImpl.ByKeyTypeImpl();
     for (Entry<String, List<String>> error : validationBundle.getKeyedErrors().entrySet()) {
       keyedMap.setAdditionalProperties(error.getKey(), error.getValue());
