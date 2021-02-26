@@ -1,12 +1,17 @@
 package org.veupathdb.service.eda.ms.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.util.JsonUtils;
 import org.gusdb.fgputil.ListBuilder;
+import org.gusdb.fgputil.json.JsonUtil;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.ClientUtil;
@@ -23,6 +28,8 @@ import org.veupathdb.service.eda.ms.Resources;
 
 public class MergeRequestProcessor {
 
+  private static final Logger LOG = LogManager.getLogger(MergeRequestProcessor.class);
+
   private final String _studyId;
   private final List<APIFilter> _filters;
   private final String _targetEntityId;
@@ -30,6 +37,8 @@ public class MergeRequestProcessor {
   private final List<VariableSpec> _outputVars;
 
   public MergeRequestProcessor(MergedEntityTabularPostRequest request) {
+
+    LOG.info("Received tabular post request: " + JsonUtil.serializeObject(request));
     _studyId = request.getStudyId();
     _filters = request.getFilters();
     _targetEntityId = request.getEntityId();
