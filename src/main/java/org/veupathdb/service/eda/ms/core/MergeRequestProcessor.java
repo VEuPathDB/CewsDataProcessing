@@ -80,7 +80,7 @@ public class MergeRequestProcessor {
 
   private static void validateIncomingRequest(String targetEntityId,
       List<VariableSpec> outputVars, ReferenceMetadata metadata) throws ValidationException {
-    EdaMergingClient mergeClient = new EdaMergingClient(null);
+    EdaMergingClient mergeClient = new EdaMergingClient("");
     StreamSpec requestSpec = new StreamSpec("incoming", targetEntityId);
     requestSpec.addAll(outputVars);
     mergeClient.validateStreamSpecs(ListBuilder.asList(requestSpec), metadata).throwIfInvalid();
