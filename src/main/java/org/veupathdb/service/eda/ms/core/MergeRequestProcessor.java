@@ -13,7 +13,7 @@ import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.json.JsonUtil;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.ClientUtil;
-import org.veupathdb.service.eda.common.client.EdaMergingClient;
+import org.veupathdb.service.eda.common.client.EdaMergingSpecValidator;
 import org.veupathdb.service.eda.common.client.EdaSubsettingClient;
 import org.veupathdb.service.eda.common.client.StreamSpec;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -41,7 +41,7 @@ public class MergeRequestProcessor {
     _filters = request.getFilters();
     _targetEntityId = request.getEntityId();
     _derivedVariables = request.getDerivedVariables();
-    _outputVars = request.getOutputVariableIds();
+    _outputVars = request.getOutputVariables();
   }
 
   public Consumer<OutputStream> createMergedResponseSupplier() throws ValidationException {
@@ -64,7 +64,7 @@ public class MergeRequestProcessor {
 
     // create stream generator
     Function<StreamSpec,InputStream> streamGenerator = spec -> subsetSvc
-        .getTabularDataStream(_studyId, _filters, spec);
+        .getTabularDataStream(metadata, _filters, spec);
 
     return out -> {
 
@@ -80,10 +80,11 @@ public class MergeRequestProcessor {
 
   private static void validateIncomingRequest(String targetEntityId,
       List<VariableSpec> outputVars, ReferenceMetadata metadata) throws ValidationException {
-    EdaMergingClient mergeClient = new EdaMergingClient("");
     StreamSpec requestSpec = new StreamSpec("incoming", targetEntityId);
     requestSpec.addAll(outputVars);
-    mergeClient.validateStreamSpecs(ListBuilder.asList(requestSpec), metadata).throwIfInvalid();
+    new EdaMergingSpecValidator()
+      .validateStreamSpecs(ListBuilder.asList(requestSpec), metadata)
+      .throwIfInvalid();
   }
 
 }
