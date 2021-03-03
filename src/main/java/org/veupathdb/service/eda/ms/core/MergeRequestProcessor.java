@@ -15,6 +15,7 @@ import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.ClientUtil;
 import org.veupathdb.service.eda.common.client.EdaMergingSpecValidator;
 import org.veupathdb.service.eda.common.client.EdaSubsettingClient;
+import org.veupathdb.service.eda.common.client.ResponseFuture;
 import org.veupathdb.service.eda.common.client.StreamSpec;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.generated.model.APIFilter;
@@ -63,7 +64,7 @@ public class MergeRequestProcessor {
         metadata, _targetEntityId, _outputVars).createSpecs();
 
     // create stream generator
-    Function<StreamSpec,InputStream> streamGenerator = spec -> subsetSvc
+    Function<StreamSpec, ResponseFuture> streamGenerator = spec -> subsetSvc
         .getTabularDataStream(metadata, _filters, spec);
 
     return out -> {

@@ -3,39 +3,28 @@
 #   Build Service & Dependencies
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-FROM veupathdb/alpine-dev-base:latest AS prep
+FROM veupathdb/alpine-dev-base:jdk-15 AS prep
 
-LABEL service="eda-merging-service-build"
+LABEL service="eda-merging-build"
 
 WORKDIR /workspace
 RUN jlink --compress=2 --module-path /opt/jdk/jmods \
-       --add-modules java.base,java.logging,java.xml,java.desktop,java.management,java.sql,java.naming \
+       --add-modules java.base,java.net.http,java.security.jgss,java.logging,java.xml,java.desktop,java.management,java.sql,java.naming \
        --output /jlinked \
     && apk add --no-cache git sed findutils coreutils make npm curl \
     && git config --global advice.detachedHead false
 
 ENV DOCKER=build
+COPY makefile .
 
-COPY ["gradlew", "makefile", "./"]
-COPY gradle/ gradle/
-RUN echo "Installing Gradle" \
-    && ./gradlew wrapper \
-    && make install-dev-env
-
-COPY [ \
-    "build.gradle.kts", \
-    "dependencies.gradle.kts", \
-    "settings.gradle.kts", \
-    "service.properties", \
-    "./"\
-]
-
-RUN ./gradlew dependencies --info --configuration runtimeClasspath
+RUN make install-dev-env
 
 COPY . .
 
 RUN mkdir -p vendor \
     && cp -n /jdbc/* vendor \
+    && echo Installing Gradle \
+    && ./gradlew dependencies --info --configuration runtimeClasspath \
     && make jar
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -45,7 +34,7 @@ RUN mkdir -p vendor \
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 FROM foxcapades/alpine-oracle:1.3
 
-LABEL service="eda-merging-service"
+LABEL service="eda-merging"
 
 ENV JAVA_HOME=/opt/jdk \
     PATH=/opt/jdk/bin:$PATH
