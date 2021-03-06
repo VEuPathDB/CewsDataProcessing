@@ -1,8 +1,8 @@
 package org.veupathdb.service.eda.ms;
 
+import org.gusdb.fgputil.client.ClientUtil;
 import org.veupathdb.lib.container.jaxrs.config.Options;
 import org.veupathdb.lib.container.jaxrs.server.ContainerResources;
-import org.veupathdb.service.eda.common.client.ClientUtil;
 
 import static org.gusdb.fgputil.runtime.Environment.getOptionalVar;
 import static org.gusdb.fgputil.runtime.Environment.getRequiredVar;

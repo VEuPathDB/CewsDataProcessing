@@ -9,14 +9,14 @@ import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
+import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.json.JsonUtil;
 import org.gusdb.fgputil.validation.ValidationException;
-import org.veupathdb.service.eda.common.client.ClientUtil;
-import org.veupathdb.service.eda.common.client.EdaMergingSpecValidator;
 import org.veupathdb.service.eda.common.client.EdaSubsettingClient;
-import org.veupathdb.service.eda.common.client.ResponseFuture;
-import org.veupathdb.service.eda.common.client.StreamSpec;
+import org.veupathdb.service.eda.common.client.StreamingDataClient;
+import org.veupathdb.service.eda.common.client.spec.EdaMergingSpecValidator;
+import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.generated.model.APIFilter;
 import org.veupathdb.service.eda.generated.model.APIStudyDetail;
@@ -75,7 +75,7 @@ public class MergeRequestProcessor {
               _outputVars, requiredStreams, dataStreams, out);
 
       // build and process streams
-      ClientUtil.buildAndProcessStreams(requiredStreams, streamGenerator, streamProcessor);
+      StreamingDataClient.buildAndProcessStreams(requiredStreams, streamGenerator, streamProcessor);
     };
   }
 
