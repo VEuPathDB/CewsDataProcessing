@@ -10,7 +10,6 @@ import org.gusdb.fgputil.validation.ValidationBundle;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.lib.container.jaxrs.providers.RequestIdProvider;
 import org.veupathdb.lib.container.jaxrs.server.annotations.DisableJackson;
-import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 import org.veupathdb.service.eda.generated.model.EntityTabularPostResponseStream;
 import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
 import org.veupathdb.service.eda.generated.model.ServerError;
@@ -20,6 +19,7 @@ import org.veupathdb.service.eda.generated.model.UnprocessableEntityError.Errors
 import org.veupathdb.service.eda.generated.model.UnprocessableEntityError.ErrorsType.ByKeyType;
 import org.veupathdb.service.eda.generated.model.UnprocessableEntityErrorImpl;
 import org.veupathdb.service.eda.generated.resources.Query;
+import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 
 public class Service implements Query {
 
@@ -38,7 +38,7 @@ public class Service implements Query {
                   .createMergedResponseSupplier()));
     }
     catch (ValidationException e) {
-      LOG.error("Invalide request", e);
+      LOG.error("Invalid request", e);
       return PostQueryResponse.respond422WithApplicationJson(toUnprocessableEntityError(e.getValidationBundle()));
     }
     catch (Exception e) {

@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -21,10 +23,13 @@ import static org.gusdb.fgputil.FormatUtil.TAB;
 
 public class StreamMerger {
 
+  private static final Logger LOG = LogManager.getLogger(StreamMerger.class);
+
   public static void writeMergedStream(ReferenceMetadata metadata, String targetEntityId,
       List<VariableSpec> requestedVars, List<StreamSpec> requiredStreams,
       Map<String, InputStream> dataStreams, OutputStream out) {
 
+    LOG.info("All requested streams (" + requiredStreams.size() + ") ready for consumption");
     EntityDef targetEntity = metadata.getEntity(targetEntityId);
     List<VariableSpec> outputVars = getOutputVars(targetEntity, requestedVars, metadata);
 
@@ -33,7 +38,10 @@ public class StreamMerger {
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
 
       // write the header row
-      writer.write(getHeaderRow(targetEntity, outputVars));
+      String headerRow = getHeaderLine(targetEntity, outputVars);
+      LOG.info("Writing header row:" + headerRow);
+      writer.write(headerRow);
+      writer.newLine();
 
       // write the entity rows
       entityStreamMap.get(targetEntityId).writeMergedTabularOutput(writer);
@@ -57,10 +65,10 @@ public class StreamMerger {
     return outputVars;
   }
 
-  private static String getHeaderRow(EntityDef targetEntity, List<VariableSpec> outputVars) {
+  private static String getHeaderLine(EntityDef targetEntity, List<VariableSpec> outputVars) {
     return outputVars.stream()
       .map(VariableDef::toDotNotation)
-      .collect(Collectors.joining(TAB)) + NL;
+      .collect(Collectors.joining(TAB));
   }
 
   private static Map<String, SingleEntityStream> buildEntityStreamMap(ReferenceMetadata metadata,
