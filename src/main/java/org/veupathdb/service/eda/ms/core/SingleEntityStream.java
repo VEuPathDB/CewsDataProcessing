@@ -35,15 +35,15 @@ public class SingleEntityStream {
 
       // skip the header row for now; later will create a variable map pointing to index of the columns
       String header = s.nextLine();
-      LOG.trace(_spec.getStreamName() + ": Skipping header row: " + header);
+      //LOG.trace(_spec.getStreamName() + ": Skipping header row: " + header);
 
       // "cheat" here and just dump the rows of this one stream (we know there's only one)
       while(s.hasNextLine()) {
         String line = s.nextLine();
-        LOG.trace(_spec.getStreamName() + ": Writing line: " + line);
+        //LOG.trace(_spec.getStreamName() + ": Writing line: " + line);
         writer.append(line).append(NL);
       }
-      LOG.trace(_spec.getStreamName() + ": Done.");
+      //LOG.trace(_spec.getStreamName() + ": Done.");
     }
   }
 }
