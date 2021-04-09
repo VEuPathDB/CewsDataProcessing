@@ -37,7 +37,7 @@ public class SubsettingStreamSpecFactory {
     // convert sorted vars to stream specs
     return sortedVars.entrySet().stream()
       .map(entry -> new StreamSpec(entry.getKey(), entry.getKey())
-        .addVariables(entry.getValue()))
+        .addVars(entry.getValue()))
       .collect(Collectors.toList());
   }
 
