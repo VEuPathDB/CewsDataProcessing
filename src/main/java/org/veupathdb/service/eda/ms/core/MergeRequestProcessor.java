@@ -74,7 +74,7 @@ public class MergeRequestProcessor {
     List<VariableDef> outputVars = metadata.getTabularColumns(targetEntity, _outputVarSpecs);
 
     // build specs for streams to be merged into this request's response
-    Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, outputVars).createSpecs();
+    Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, outputVars).createSpecs();
     List<StreamSpec> requiredStreamList = new ArrayList<>(requiredStreams.values());
 
     // create stream generator
