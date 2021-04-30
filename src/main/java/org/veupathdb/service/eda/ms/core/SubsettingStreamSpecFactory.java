@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
@@ -15,6 +17,8 @@ import org.veupathdb.service.eda.common.model.VariableSource;
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 
 public class SubsettingStreamSpecFactory {
+
+  private final static Logger LOG = LogManager.getLogger(SubsettingStreamSpecFactory.class);
 
   private final ReferenceMetadata _metadata;
   private final EntityDef _targetEntity;
@@ -49,6 +53,7 @@ public class SubsettingStreamSpecFactory {
       //     this ensures uniqueness of entities (one stream per entity) and easy lookup by entity ID
       .map(entry -> new StreamSpec(entry.getKey(), entry.getKey())
         .addVars(entry.getValue()))
+      .peek(spec -> LOG.info("Built stream spec: " + spec))
       .collect(newLinkedHashMapCollector(StreamSpec::getStreamName));
   }
 
