@@ -41,7 +41,8 @@ public class SubsettingStreamSpecFactory {
     if (!sortedVars.containsKey(_targetEntity.getId())) {
       // FIXME: need to hack in at least one var or subsetting service chokes
       // add first var in entity to work around no-vars bug in subsetting service
-      VariableDef firstNativeVar = _metadata.getEntity(_targetEntity.getId()).orElseThrow().stream()
+      VariableDef firstNativeVar = _metadata.getEntity(_targetEntity.getId()).orElseThrow()
+          .getVariablesWithDefaultUnitsAndScale().stream()
           .filter(var -> VariableSource.NATIVE.equals(var.getSource()))
           .findFirst().orElseThrow(); // should have at least one native var
       sortedVars.put(_targetEntity.getId(), ListBuilder.asList(firstNativeVar));
