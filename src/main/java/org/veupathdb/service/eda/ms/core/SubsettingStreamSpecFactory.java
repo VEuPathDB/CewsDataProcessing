@@ -30,9 +30,16 @@ public class SubsettingStreamSpecFactory {
     _outputVars = outputVars;
   }
 
+  /**
+   * Creates a set of stream specs required to deliver the outputVars for this factory.
+   * A stream spec will be generated for each entity must deliver vars; this includes
+   * "pivot" entities that may not provide their own native vars, but nevertheless need
+   * to provide a stream of IDs in order to collect reduction derived vars from their
+   * children.
+   */
   public Map<String, StreamSpec> createSpecs() throws ValidationException {
 
-    // gather all needed vars and sort by entity
+    // gather all needed native and reduction vars and sort by entity
     Map<String,List<VariableDef>> sortedVars =
       findAllNeededVars(_outputVars, new ArrayList<>())
         .stream().collect(Collectors.groupingBy(VariableDef::getEntityId));
@@ -40,12 +47,16 @@ public class SubsettingStreamSpecFactory {
     // even if no vars are required of the target entity, still need a stream for the target
     if (!sortedVars.containsKey(_targetEntity.getId())) {
       // FIXME: need to hack in at least one var or subsetting service chokes
-      // add first var in entity to work around no-vars bug in subsetting service
-      VariableDef firstNativeVar = _metadata.getEntity(_targetEntity.getId()).orElseThrow()
-          .getVariablesWithDefaultUnitsAndScale().stream()
-          .filter(var -> VariableSource.NATIVE.equals(var.getSource()))
-          .findFirst().orElseThrow(); // should have at least one native var
-      sortedVars.put(_targetEntity.getId(), ListBuilder.asList(firstNativeVar));
+      sortedVars.put(_targetEntity.getId(), ListBuilder.asList(_targetEntity.findFirstNativeVar()));
+    }
+
+    // sortedVars may contain entities with only reduction vars; if so add first native (derived vars removed later)
+    for (String entityId : new ArrayList<>(sortedVars.keySet())) {
+      boolean alreadyHaveStreamSpecCompatibleVar = sortedVars.get(entityId)
+          .stream().anyMatch(var -> var.getSource().isNativeOrId() || var.getSource().isInherited());
+      if (!alreadyHaveStreamSpecCompatibleVar) {
+        sortedVars.get(entityId).add(_targetEntity.findFirstNativeVar());
+      }
     }
 
     // convert sorted vars to stream specs
@@ -53,7 +64,10 @@ public class SubsettingStreamSpecFactory {
       // important: for the purposes of the merging service the stream name must be the entity ID;
       //     this ensures uniqueness of entities (one stream per entity) and easy lookup by entity ID
       .map(entry -> new StreamSpec(entry.getKey(), entry.getKey())
-        .addVars(entry.getValue()))
+        .addVars(entry.getValue().stream()
+            // skip derived vars; they do not belong in stream specs
+            .filter(var -> !var.getSource().isDerived())
+            .collect(Collectors.toList())))
       .peek(spec -> LOG.info("Built stream spec: " + spec))
       .collect(newLinkedHashMapCollector(StreamSpec::getStreamName));
   }
@@ -68,6 +82,9 @@ public class SubsettingStreamSpecFactory {
           accumulator.add(var);
           break;
         case DERIVED_BY_REDUCTION:
+          // add the derived var itself; will cause a stream to be produced
+          //   even if no native vars are required on this entity
+          accumulator.add(var);
         case DERIVED_BY_TRANSFORM:
           findAllNeededVars(_metadata
               .findDerivedVariable(var)
