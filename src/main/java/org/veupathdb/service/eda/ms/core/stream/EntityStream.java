@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Scanner;
@@ -58,13 +59,12 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
 
     // capture the header and validate response
     Map<String,String> header = _parser.parseLine(scanner.nextLine()); // validates counts
-    List<String> received = new ArrayList<>(header.values());
-    for (int i = 0; i < received.size(); i++) {
-      if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) {
+    for (Entry<String,String> headerColumnName : header.entrySet()) {
+      if (!headerColumnName.getKey().equals(headerColumnName.getValue())) {
         throw new RuntimeException("Tabular subsetting result of type '" +
-            _entity.getId() + "' contained unexpected header." + NL + "Expected:" +
-            _expectedNativeColumns.stream().map(v -> v.getVariableId()).collect(Collectors.joining(",")) +
-            NL + "Found   : " + String.join(",", received));
+            _entity.getId() + "' contained unexpected header." + NL +
+            "Expected: " + header.keySet().stream().collect(Collectors.joining(", ")) + NL +
+            "Found   : " + header.values().stream().collect(Collectors.joining(", ")));
       }
     }
     return scanner;
