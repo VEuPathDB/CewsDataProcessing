@@ -25,6 +25,11 @@ import org.veupathdb.service.eda.ms.core.derivedvars.plugin.Transform;
 import static org.gusdb.fgputil.FormatUtil.NL;
 import static org.gusdb.fgputil.FormatUtil.TAB;
 
+/**
+ * Base class for various entity streams, which handles reading tabular data
+ * into a map for each row and caching the last row read for inspection
+ * before delivery.
+ */
 public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
 
   private static final Logger LOG = LogManager.getLogger(EntityStream.class);
