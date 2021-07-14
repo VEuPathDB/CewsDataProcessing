@@ -95,22 +95,6 @@ types:
     additionalProperties: false
     properties:
       count: integer
-  VariableDistributionPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      filters: API_Filter[]
-  VariableDistributionPostResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      entitiesCount:
-        type: integer
-        minimum: 0
-      distribution:
-        type: object
-        properties:
-          //: integer
   EntityTabularPostRequest:
     type: object
     additionalProperties: false
@@ -122,6 +106,58 @@ types:
     additionalProperties: false
     properties:
       counts: string[][]
+  BinUnits:
+    type: string
+    enum:
+      - day
+      - week
+      - month
+      - year
+  BinSpecWithRange:
+    type: object
+    additionalProperties: false
+    properties:
+      displayRangeMin: any
+      displayRangeMax: any
+      binWidth: number
+      binUnits?: BinUnits
+  ValueSpec:
+    type: string
+    enum:
+      - count
+      - proportion
+  VariableDistributionPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      filters: API_Filter[]
+      binSpec?: BinSpecWithRange
+      valueSpec: ValueSpec
+  HistogramBin:
+    type: object
+    additionalProperties: false
+    properties:
+      value: number
+      binStart: string
+      binEnd: string
+      binLabel: string
+  HistogramStats:
+    type: object
+    additionalProperties: false
+    properties:
+      subsetMin?: any
+      subsetMax?: any
+      subsetMean?: any
+      numVarValues: integer
+      numDistinctValues: integer
+      numDistinctEntityRecords: integer
+      numMissingCases: integer
+  VariableDistributionPostResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      histogram: HistogramBin[]
+      statistics: HistogramStats
   StudiesGetResponse:
     type: object
     additionalProperties: false
@@ -226,8 +262,9 @@ types:
       displayRangeMax?: string
       rangeMin?: string
       rangeMax?: string
-      binWidthOverride?: string
-      binWidth?: string
+      binWidthOverride?: number
+      binWidth?: number
+      binUnits?: BinUnits
       distinctValuesCount: number
       isTemporal: boolean
       isFeatured: boolean
