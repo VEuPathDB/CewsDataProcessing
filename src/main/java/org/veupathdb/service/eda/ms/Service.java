@@ -2,6 +2,7 @@ package org.veupathdb.service.eda.ms;
 
 import java.util.List;
 import java.util.Map.Entry;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Request;
 import org.apache.logging.log4j.LogManager;
@@ -39,32 +40,7 @@ public class Service implements Query {
     }
     catch (ValidationException e) {
       LOG.error("Invalid request", e);
-      return PostQueryResponse.respond422WithApplicationJson(toUnprocessableEntityError(e.getValidationBundle()));
+      throw new BadRequestException(e.toString());
     }
-    catch (Exception e) {
-      LOG.error("Could not execute query", e);
-      return PostQueryResponse.respond500WithApplicationJson(toServerError(_request, e));
-    }
-  }
-
-  private static ServerError toServerError(Request request, Exception e) {
-    ServerError errorBundle = new ServerErrorImpl();
-    errorBundle.setMessage(e.getMessage());
-    errorBundle.setRequestId(RequestIdProvider.getRequestId(request));
-    return errorBundle;
-  }
-
-  private static UnprocessableEntityError toUnprocessableEntityError(ValidationBundle validationBundle) {
-    ByKeyType keyedMap = new UnprocessableEntityErrorImpl.ErrorsTypeImpl.ByKeyTypeImpl();
-    for (Entry<String, List<String>> error : validationBundle.getKeyedErrors().entrySet()) {
-      keyedMap.setAdditionalProperties(error.getKey(), error.getValue());
-    }
-    ErrorsType errors = new UnprocessableEntityErrorImpl.ErrorsTypeImpl();
-    errors.setGeneral(validationBundle.getUnkeyedErrors());
-    errors.setByKey(keyedMap);
-    UnprocessableEntityError errorBundle = new UnprocessableEntityErrorImpl();
-    errorBundle.setMessage("Request is invalid.");
-    errorBundle.setErrors(errors);
-    return errorBundle;
   }
 }
