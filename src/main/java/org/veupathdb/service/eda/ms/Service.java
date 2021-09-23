@@ -33,7 +33,7 @@ public class Service implements Query {
   @Override
   public PostQueryResponse postQuery(MergedEntityTabularPostRequest request) {
     try {
-      return PostQueryResponse.respond200WithTextPlain(
+      return PostQueryResponse.respond200WithTextTabSeparatedValues(
           new EntityTabularPostResponseStream(
               new MergeRequestProcessor(request)
                   .createMergedResponseSupplier()));
