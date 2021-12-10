@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -45,20 +46,22 @@ public class MergeRequestProcessor {
   private final String _targetEntityId;
   private final List<DerivedVariable> _derivedVariables;
   private final List<VariableSpec> _outputVarSpecs;
+  private final Entry<String, String> _authHeader;
 
-  public MergeRequestProcessor(MergedEntityTabularPostRequest request) {
+  public MergeRequestProcessor(MergedEntityTabularPostRequest request, Entry<String, String> authHeader) {
     LOG.info("Received tabular post request: " + JsonUtil.serializeObject(request));
     _studyId = request.getStudyId();
     _filters = request.getFilters();
     _targetEntityId = request.getEntityId();
     _derivedVariables = request.getDerivedVariables();
     _outputVarSpecs = request.getOutputVariables();
+    _authHeader = authHeader;
   }
 
   public Consumer<OutputStream> createMergedResponseSupplier() throws ValidationException {
 
     // create subsetting client
-    EdaSubsettingClient subsetSvc = new EdaSubsettingClient(Resources.SUBSETTING_SERVICE_URL);
+    EdaSubsettingClient subsetSvc = new EdaSubsettingClient(Resources.SUBSETTING_SERVICE_URL, _authHeader);
 
     // build metadata for requested study
     APIStudyDetail studyDetail = subsetSvc.getStudy(_studyId)
