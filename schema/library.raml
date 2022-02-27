@@ -72,8 +72,8 @@ types:
   API_PagingConfig:
     type: object
     properties:
-      numRows: integer
-      offset: integer
+      numRows?: integer
+      offset?: integer
   TabularHeaderFormat:
     type: string
     enum:
@@ -85,6 +85,7 @@ types:
       sorting?: SortSpecEntry[]
       paging?: API_PagingConfig
       headerFormat?: TabularHeaderFormat
+      trimTimeFromDateVars?: boolean
   BinUnits:
     type: string
     enum:
