@@ -1,18 +1,17 @@
 package org.veupathdb.service.eda.ms.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.ListBuilder;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.common.model.VariableSource;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 
@@ -39,12 +38,7 @@ public class SubsettingStreamSpecFactory {
 
     // even if no vars are required of the target entity, still need a stream for the target
     if (!sortedVars.containsKey(_targetEntity.getId())) {
-      // FIXME: need to hack in at least one var or subsetting service chokes
-      // add first var in entity to work around no-vars bug in subsetting service
-      VariableDef firstNativeVar = _metadata.getEntity(_targetEntity.getId()).orElseThrow().stream()
-          .filter(var -> VariableSource.NATIVE.equals(var.getSource()))
-          .findFirst().orElseThrow(); // should have at least one native var
-      sortedVars.put(_targetEntity.getId(), ListBuilder.asList(firstNativeVar));
+      sortedVars.put(_targetEntity.getId(), Collections.emptyList());
     }
 
     // convert sorted vars to stream specs
