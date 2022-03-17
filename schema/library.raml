@@ -7,6 +7,107 @@
 ################################################################################
 
 types:
+  API_Filter:
+    type: object
+    discriminator: type
+    properties:
+      entityId: string
+      type: API_FilterType
+  API_FilterType:
+    type: string
+    enum:
+      - stringSet
+      - numberSet
+      - dateSet
+      - numberRange
+      - dateRange
+      - longitudeRange
+      - multiFilter
+  API_BooleanOperationType:
+    type: string
+    enum:
+      - intersect
+      - union
+  API_MultiFilterSubFilter:
+    type: object
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_MultiFilter:
+    type: API_Filter
+    discriminatorValue: 'multiFilter'
+    properties:
+      operation: API_BooleanOperationType
+      variableId: string
+      subFilters: API_MultiFilterSubFilter[]
+  API_StringSetFilter:
+    type: API_Filter
+    discriminatorValue: 'stringSet'
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_NumberSetFilter:
+    type: API_Filter
+    discriminatorValue: 'numberSet'
+    properties:
+      variableId: string
+      numberSet: number[]
+  API_DateSetFilter:
+    type: API_Filter
+    discriminatorValue: 'dateSet'
+    properties:
+      variableId: string
+      dateSet: string[] # how to constrain this to a date?
+  API_NumberRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'numberRange'
+    properties:
+      variableId: string
+      min: number
+      max: number
+  API_DateRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'dateRange'
+    properties:
+      variableId: string
+      min: string
+      max: string
+  API_LongitudeRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'longitudeRange'
+    properties:
+      variableId: string
+      left: number
+      right: number
+  VariableSpec:
+    type: object
+    additionalProperties: false
+    properties:
+      entityId: string
+      variableId: string
+  DerivationType:
+    type: string
+    enum:
+      - transform
+      - reduction
+  DerivedVariable:
+    type: VariableSpec
+    properties:
+      variableType: API_VariableType
+      variableDataShape: API_VariableDataShape
+      derivationType: DerivationType
+      functionName: string
+      inputVars: VariableSpec[]
+      config: object # TBD
+  MergedEntityTabularPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      studyId: string
+      filters: API_Filter[]
+      entityId: string
+      outputVariables: VariableSpec[]
+      derivedVariables: DerivedVariable[]
   EntityCountPostRequest:
     type: object
     additionalProperties: false
@@ -184,9 +285,11 @@ types:
     type: string
     enum:
       - default
+      - hidden
       - multifilter
       - geoaggregator
-      - hidden
+      - latitude
+      - longitude
   API_VariablesCategory:
     type: API_Variable
     discriminatorValue: category
@@ -232,105 +335,4 @@ types:
       binWidth?: number
       binWidthOverride?: number
       binUnits?: BinUnits
-  API_Filter:
-    type: object
-    discriminator: type
-    properties:
-      entityId: string
-      type: API_FilterType
-  API_FilterType:
-    type: string
-    enum:
-      - stringSet
-      - numberSet
-      - dateSet
-      - numberRange
-      - dateRange
-      - longitudeRange
-      - multiFilter
-  API_BooleanOperationType:
-    type: string
-    enum:
-      - intersect
-      - union
-  API_MultiFilterSubFilter:
-    type: object
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_MultiFilter:
-    type: API_Filter
-    discriminatorValue: 'multiFilter'
-    properties:
-      operation: API_BooleanOperationType
-      variableId: string
-      subFilters: API_MultiFilterSubFilter[]
-  API_StringSetFilter:
-    type: API_Filter
-    discriminatorValue: 'stringSet'
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_NumberSetFilter:
-    type: API_Filter
-    discriminatorValue: 'numberSet'
-    properties:
-      variableId: string
-      numberSet: number[]
-  API_DateSetFilter:
-    type: API_Filter
-    discriminatorValue: 'dateSet'
-    properties:
-      variableId: string
-      dateSet: string[] # how to constrain this to a date?
-  API_NumberRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'numberRange'
-    properties:
-      variableId: string
-      min: number
-      max: number
-  API_DateRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'dateRange'
-    properties:
-      variableId: string
-      min: string
-      max: string
-  API_LongitudeRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'longitudeRange'
-    properties:
-      variableId: string
-      left: number
-      right: number
-  VariableSpec:
-    type: object
-    additionalProperties: false
-    properties:
-      entityId: string
-      variableId: string
-  DerivationType:
-    type: string
-    enum:
-      - transform
-      - reduction
-  DerivedVariable:
-    type: VariableSpec
-    properties:
-      variableType: API_VariableType
-      variableDataShape: API_VariableDataShape
-      derivationType: DerivationType
-      functionName: string
-      inputVars: VariableSpec[]
-      config: object # TBD
-  MergedEntityTabularPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      studyId: string
-      filters: API_Filter[]
-      entityId: string
-      outputVariables: VariableSpec[]
-      derivedVariables: DerivedVariable[]
 
