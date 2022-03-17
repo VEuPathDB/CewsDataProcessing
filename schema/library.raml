@@ -7,35 +7,6 @@
 ################################################################################
 
 types:
-  VariableSpec:
-    type: object
-    additionalProperties: false
-    properties:
-      entityId: string
-      variableId: string
-  DerivationType:
-    type: string
-    enum:
-      - transform
-      - reduction
-  DerivedVariable:
-    type: VariableSpec
-    properties:
-      variableType: API_VariableType
-      variableDataShape: API_VariableDataShape
-      derivationType: DerivationType
-      functionName: string
-      inputVars: VariableSpec[]
-      config: object # TBD
-  MergedEntityTabularPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      studyId: string
-      filters: API_Filter[]
-      entityId: string
-      outputVariables: VariableSpec[]
-      derivedVariables: DerivedVariable[]
   EntityCountPostRequest:
     type: object
     additionalProperties: false
@@ -214,6 +185,7 @@ types:
     enum:
       - default
       - multifilter
+      - geoaggregator
       - hidden
   API_VariablesCategory:
     type: API_Variable
@@ -332,4 +304,33 @@ types:
       variableId: string
       left: number
       right: number
+  VariableSpec:
+    type: object
+    additionalProperties: false
+    properties:
+      entityId: string
+      variableId: string
+  DerivationType:
+    type: string
+    enum:
+      - transform
+      - reduction
+  DerivedVariable:
+    type: VariableSpec
+    properties:
+      variableType: API_VariableType
+      variableDataShape: API_VariableDataShape
+      derivationType: DerivationType
+      functionName: string
+      inputVars: VariableSpec[]
+      config: object # TBD
+  MergedEntityTabularPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      studyId: string
+      filters: API_Filter[]
+      entityId: string
+      outputVariables: VariableSpec[]
+      derivedVariables: DerivedVariable[]
 
