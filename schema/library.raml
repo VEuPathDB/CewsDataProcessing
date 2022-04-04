@@ -117,7 +117,9 @@ types:
     type: object
     additionalProperties: false
     properties:
-      count: integer
+      count:
+        type: integer
+        format: int64
   EntityTabularPostRequest:
     type: object
     additionalProperties: false
@@ -144,8 +146,12 @@ types:
   API_PagingConfig:
     type: object
     properties:
-      numRows?: integer
-      offset?: integer
+      numRows?:
+        type: integer
+        format: int64
+      offset?:
+        type: integer
+        format: int64
   TabularHeaderFormat:
     type: string
     enum:
@@ -197,14 +203,24 @@ types:
     type: object
     additionalProperties: false
     properties:
-      subsetSize: integer
+      subsetSize:
+        type: integer
+        format: int64
       subsetMin?: any
       subsetMax?: any
       subsetMean?: any
-      numVarValues: integer
-      numDistinctValues: integer
-      numDistinctEntityRecords: integer
-      numMissingCases: integer
+      numVarValues:
+        type: integer
+        format: int64
+      numDistinctValues:
+        type: integer
+        format: int64
+      numDistinctEntityRecords:
+        type: integer
+        format: int64
+      numMissingCases:
+        type: integer
+        format: int64
   VariableDistributionPostResponse:
     type: object
     additionalProperties: false
@@ -318,12 +334,24 @@ types:
     discriminatorValue: integer
     properties:
       units: string
-      displayRangeMin?: integer
-      displayRangeMax?: integer
-      rangeMin?: integer
-      rangeMax?: integer
-      binWidth?: integer
-      binWidthOverride?: integer
+      displayRangeMin?:
+        format: int64
+        type: integer
+      displayRangeMax?:
+        format: int64
+        type: integer
+      rangeMin?:
+        format: int64
+        type: integer
+      rangeMax?:
+        format: int64
+        type: integer
+      binWidth?:
+        format: int64
+        type: integer
+      binWidthOverride?:
+        format: int64
+        type: integer
   API_DateVariable:
     type: API_VariableWithValues
     discriminatorValue: date
