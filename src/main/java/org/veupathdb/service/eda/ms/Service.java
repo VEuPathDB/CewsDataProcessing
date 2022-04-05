@@ -1,8 +1,8 @@
 package org.veupathdb.service.eda.ms;
 
 import java.util.Map.Entry;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.core.Context;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.core.Context;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.server.ContainerRequest;
