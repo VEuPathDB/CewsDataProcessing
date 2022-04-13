@@ -7,220 +7,18 @@
 ################################################################################
 
 types:
-  StudiesGetResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      studies: API_StudyOverview[]
-  StudyIdGetResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      study: API_StudyDetail
-  API_StudyOverview:
-    type: object
-    properties:
-      id: string
-  EntityIdGetResponse: API_Entity
-  API_StudyDetail:
-    type: object
-    properties:
-      id: string
-      rootEntity: API_Entity
-  API_Entity:
-    type: object
-    properties:
-      id: string
-      idColumnName: string
-      displayName: string
-      displayNamePlural: string
-      description: string
-      children?: API_Entity[]
-      variables: API_Variable[]
-  API_Variable:
-    type: object
-    discriminator: type
-    properties:
-      id: string
-      parentId?: string
-      providerLabel: string
-      displayName: string
-      definition?: string
-      displayType: API_VariableDisplayType
-      displayOrder?: number
-      isCategory: string
-      type: API_VariableType
-      hideFrom: string[]
-  API_VariableWithValues:
-    type: API_Variable
-    properties:
-      dataShape?: API_VariableDataShape
-      vocabulary?: string[]
-      distinctValuesCount: number
-      isTemporal: boolean
-      isFeatured: boolean
-      isMergeKey: boolean
-      isMultiValued: boolean
-  API_VariableType:
-    type: string
-    enum:
-      - category
-      - string
-      - number
-      - date
-      - longitude
-      - integer
-  API_VariableDataShape:
-    type: string
-    enum:
-      - continuous
-      - categorical
-      - ordinal
-      - binary
-  API_VariableDisplayType:
-    type: string
-    enum:
-      - default
-      - hidden
-      - multifilter
-      - geoaggregator
-      - latitude
-      - longitude
-  API_VariablesCategory:
-    type: API_Variable
-    discriminatorValue: category
-  API_StringVariable:
-    type: API_VariableWithValues
-    discriminatorValue: string
-  API_LongitudeVariable:
-    type: API_VariableWithValues
-    discriminatorValue: longitude
-    properties:
-      precision: number
-  API_NumberVariable:
-    type: API_VariableWithValues
-    discriminatorValue: number
-    properties:
-      units: string
-      precision: number
-      displayRangeMin?: number
-      displayRangeMax?: number
-      rangeMin?: number
-      rangeMax?: number
-      binWidth?: number
-      binWidthOverride?: number
-  API_IntegerVariable:
-    type: API_VariableWithValues
-    discriminatorValue: integer
-    properties:
-      units: string
-      displayRangeMin?:
-        format: int64
-        type: integer
-      displayRangeMax?:
-        format: int64
-        type: integer
-      rangeMin?:
-        format: int64
-        type: integer
-      rangeMax?:
-        format: int64
-        type: integer
-      binWidth?:
-        format: int64
-        type: integer
-      binWidthOverride?:
-        format: int64
-        type: integer
-  API_DateVariable:
-    type: API_VariableWithValues
-    discriminatorValue: date
-    properties:
-      displayRangeMin?: string
-      displayRangeMax?: string
-      rangeMin?: string
-      rangeMax?: string
-      binWidth?: number
-      binWidthOverride?: number
-      binUnits?: BinUnits
-  API_Filter:
-    type: object
-    discriminator: type
-    properties:
-      entityId: string
-      type: API_FilterType
-  API_FilterType:
-    type: string
-    enum:
-      - stringSet
-      - numberSet
-      - dateSet
-      - numberRange
-      - dateRange
-      - longitudeRange
-      - multiFilter
-  API_BooleanOperationType:
-    type: string
-    enum:
-      - intersect
-      - union
-  API_MultiFilterSubFilter:
-    type: object
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_MultiFilter:
-    type: API_Filter
-    discriminatorValue: 'multiFilter'
-    properties:
-      operation: API_BooleanOperationType
-      variableId: string
-      subFilters: API_MultiFilterSubFilter[]
-  API_StringSetFilter:
-    type: API_Filter
-    discriminatorValue: 'stringSet'
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_NumberSetFilter:
-    type: API_Filter
-    discriminatorValue: 'numberSet'
-    properties:
-      variableId: string
-      numberSet: number[]
-  API_DateSetFilter:
-    type: API_Filter
-    discriminatorValue: 'dateSet'
-    properties:
-      variableId: string
-      dateSet: string[] # how to constrain this to a date?
-  API_NumberRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'numberRange'
-    properties:
-      variableId: string
-      min: number
-      max: number
-  API_DateRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'dateRange'
-    properties:
-      variableId: string
-      min: string
-      max: string
-  API_LongitudeRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'longitudeRange'
-    properties:
-      variableId: string
-      left: number
-      right: number
   VariableSpec:
     type: object
     additionalProperties: false
     properties:
       entityId: string
       variableId: string
+  CollectionSpec:
+    type: object
+    additionalProperties: false
+    properties:
+      entityId: string
+      collectionId: string
   DerivationType:
     type: string
     enum:
@@ -363,4 +161,271 @@ types:
     properties:
       histogram: HistogramBin[]
       statistics: HistogramStats
+  StudiesGetResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      studies: API_StudyOverview[]
+  StudyIdGetResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      study: API_StudyDetail
+  API_StudyOverview:
+    type: object
+    properties:
+      id: string
+  EntityIdGetResponse:
+    type: object
+    properties:
+      id: string
+      idColumnName: string
+      displayName: string
+      displayNamePlural: string
+      description: string
+      isManyToOneWithParent: boolean
+      variables: API_Variable[]
+      collections: API_Collection[]
+  API_StudyDetail:
+    type: object
+    properties:
+      id: string
+      rootEntity: API_Entity
+  API_Entity:
+    type: EntityIdGetResponse
+    properties:
+      children?: API_Entity[]
+  API_Collection:
+    type: object
+    discriminator: type
+    properties:
+      id: string
+      displayName: string
+      type: API_CollectionType
+      dataShape: API_VariableDataShape
+      vocabulary?: string[]
+      distinctValuesCount?:
+        type: integer
+        format: int64
+      memberVariableIds: string[]
+      imputeZero: boolean
+  API_CollectionType:
+    type: string
+    enum:
+      - number
+      - date
+      - integer
+  API_NumberCollection:
+    type: API_Collection
+    discriminatorValue: number
+    properties:
+      distributionDefaults: API_NumberDistributionDefaults
+      units: string
+      precision: number
+  API_IntegerCollection:
+    type: API_Collection
+    discriminatorValue: integer
+    properties:
+      distributionDefaults: API_IntegerDistributionDefaults
+      units: string
+  API_DateCollection:
+    type: API_Collection
+    discriminatorValue: date
+    properties:
+      distributionDefaults: API_DateDistributionDefaults
+  API_Variable:
+    type: object
+    discriminator: type
+    properties:
+      id: string
+      parentId?: string
+      providerLabel: string
+      displayName: string
+      definition?: string
+      displayType: API_VariableDisplayType
+      displayOrder?:
+        type: integer
+        format: int64
+      isCategory: string
+      type: API_VariableType
+      hideFrom: string[]
+  API_VariableWithValues:
+    type: API_Variable
+    properties:
+      dataShape?: API_VariableDataShape
+      vocabulary?: string[]
+      distinctValuesCount:
+        type: integer
+        format: int64
+      isTemporal: boolean
+      isFeatured: boolean
+      isMergeKey: boolean
+      isMultiValued: boolean
+      imputeZero: boolean
+  API_VariableType:
+    type: string
+    enum:
+      - category
+      - string
+      - number
+      - date
+      - longitude
+      - integer
+  API_VariableDataShape:
+    type: string
+    enum:
+      - continuous
+      - categorical
+      - ordinal
+      - binary
+  API_VariableDisplayType:
+    type: string
+    enum:
+      - default
+      - hidden
+      - multifilter
+      - geoaggregator
+      - latitude
+      - longitude
+  API_VariablesCategory:
+    type: API_Variable
+    discriminatorValue: category
+  API_StringVariable:
+    type: API_VariableWithValues
+    discriminatorValue: string
+  API_LongitudeVariable:
+    type: API_VariableWithValues
+    discriminatorValue: longitude
+    properties:
+      precision: number
+  API_NumberDistributionDefaults:
+    type: object
+    properties:
+      displayRangeMin?: number
+      displayRangeMax?: number
+      rangeMin?: number
+      rangeMax?: number
+      binWidth?: number
+      binWidthOverride?: number
+  API_IntegerDistributionDefaults:
+    type: object
+    properties:
+      displayRangeMin?:
+        type: integer
+        format: int64
+      displayRangeMax?:
+        type: integer
+        format: int64
+      rangeMin?:
+        type: integer
+        format: int64
+      rangeMax?:
+        type: integer
+        format: int64
+      binWidth?:
+        type: integer
+        format: int64
+      binWidthOverride?:
+        type: integer
+        format: int64
+  API_DateDistributionDefaults:
+    type: object
+    properties:
+      displayRangeMin?: string
+      displayRangeMax?: string
+      rangeMin?: string
+      rangeMax?: string
+      binWidth?: integer
+      binWidthOverride?: integer
+      binUnits?: BinUnits
+  API_NumberVariable:
+    type: API_VariableWithValues
+    discriminatorValue: number
+    properties:
+      distributionDefaults: API_NumberDistributionDefaults
+      units: string
+      precision: number
+  API_IntegerVariable:
+    type: API_VariableWithValues
+    discriminatorValue: integer
+    properties:
+      distributionDefaults: API_IntegerDistributionDefaults
+      units: string
+  API_DateVariable:
+    type: API_VariableWithValues
+    discriminatorValue: date
+    properties:
+      distributionDefaults: API_DateDistributionDefaults
+  API_Filter:
+    type: object
+    discriminator: type
+    properties:
+      entityId: string
+      type: API_FilterType
+  API_FilterType:
+    type: string
+    enum:
+      - stringSet
+      - numberSet
+      - dateSet
+      - numberRange
+      - dateRange
+      - longitudeRange
+      - multiFilter
+  API_BooleanOperationType:
+    type: string
+    enum:
+      - intersect
+      - union
+  API_MultiFilterSubFilter:
+    type: object
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_MultiFilter:
+    type: API_Filter
+    discriminatorValue: 'multiFilter'
+    properties:
+      operation: API_BooleanOperationType
+      variableId: string
+      subFilters: API_MultiFilterSubFilter[]
+  API_StringSetFilter:
+    type: API_Filter
+    discriminatorValue: 'stringSet'
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_NumberSetFilter:
+    type: API_Filter
+    discriminatorValue: 'numberSet'
+    properties:
+      variableId: string
+      numberSet: number[]
+  API_DateSetFilter:
+    type: API_Filter
+    discriminatorValue: 'dateSet'
+    properties:
+      variableId: string
+      dateSet: string[] # how to constrain this to a date?
+  API_NumberRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'numberRange'
+    properties:
+      variableId: string
+      min: number
+      max: number
+  API_DateRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'dateRange'
+    properties:
+      variableId: string
+      min: string
+      max: string
+  API_LongitudeRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'longitudeRange'
+    properties:
+      variableId: string
+      left: number
+      right: number
 
