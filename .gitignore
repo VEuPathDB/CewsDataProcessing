@@ -4,6 +4,7 @@
 /vendor/
 /.tools/
 
+.bin
 *.jar
 
 /bin/
