@@ -3,6 +3,7 @@ package org.veupathdb.service.eda.ms.core.derivedvars.plugin;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.gusdb.fgputil.validation.ValidationException;
+import org.veupathdb.service.eda.ms.core.derivedvars.plugin.transforms.CategoricalRecoding;
 import org.veupathdb.service.eda.ms.core.derivedvars.plugin.transforms.Concatenation;
 
 public abstract class Transform extends DerivedVariablePlugin {
@@ -10,7 +11,8 @@ public abstract class Transform extends DerivedVariablePlugin {
   static Map<String, Supplier<Transform>> getPlugins() {
     return pluginsOf(Transform.class,
       // available transforms
-      Concatenation.class
+      Concatenation.class,
+      CategoricalRecoding.class
     );
   }
 
