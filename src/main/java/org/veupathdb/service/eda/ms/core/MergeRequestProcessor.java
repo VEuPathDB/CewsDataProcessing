@@ -19,6 +19,7 @@ import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.iterator.IteratorUtil;
 import org.gusdb.fgputil.json.JsonUtil;
 import org.gusdb.fgputil.validation.ValidationException;
+import org.veupathdb.service.eda.common.client.EdaComputeClient;
 import org.veupathdb.service.eda.common.client.EdaSubsettingClient;
 import org.veupathdb.service.eda.common.client.StreamingDataClient;
 import org.veupathdb.service.eda.common.client.spec.EdaMergingSpecValidator;
@@ -26,11 +27,7 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.generated.model.APIFilter;
-import org.veupathdb.service.eda.generated.model.APIStudyDetail;
-import org.veupathdb.service.eda.generated.model.DerivedVariable;
-import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
-import org.veupathdb.service.eda.generated.model.VariableSpec;
+import org.veupathdb.service.eda.generated.model.*;
 import org.veupathdb.service.eda.ms.Resources;
 import org.veupathdb.service.eda.ms.core.stream.EntityStream;
 import org.veupathdb.service.eda.ms.core.stream.TargetEntityStream;
@@ -46,6 +43,7 @@ public class MergeRequestProcessor {
   private final String _targetEntityId;
   private final List<DerivedVariable> _derivedVariables;
   private final List<VariableSpec> _outputVarSpecs;
+  private final ComputeSpecForMerging _computeRequestSpec;
   private final Entry<String, String> _authHeader;
 
   public MergeRequestProcessor(MergedEntityTabularPostRequest request, Entry<String, String> authHeader) {
@@ -55,6 +53,7 @@ public class MergeRequestProcessor {
     _targetEntityId = request.getEntityId();
     _derivedVariables = request.getDerivedVariables();
     _outputVarSpecs = request.getOutputVariables();
+    _computeRequestSpec = request.getComputeSpec();
     _authHeader = authHeader;
   }
 
@@ -62,6 +61,7 @@ public class MergeRequestProcessor {
 
     // create subsetting client
     EdaSubsettingClient subsetSvc = new EdaSubsettingClient(Resources.SUBSETTING_SERVICE_URL, _authHeader);
+    EdaComputeClient computeSvc = new EdaComputeClient(Resources.COMPUTE_SERVICE_URL, _authHeader);
 
     // build metadata for requested study
     APIStudyDetail studyDetail = subsetSvc.getStudy(_studyId)

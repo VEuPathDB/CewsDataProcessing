@@ -7,26 +7,6 @@
 ################################################################################
 
 types:
-  VisualizationDataElementConstraint:
-    type: object
-    additionalProperties: false
-    properties:
-      isRequired: boolean
-      isTemporal: boolean
-      minNumVars: number
-      maxNumVars: number
-      maxNumValues: number
-      allowedTypes:
-        type: API_VariableType[]
-        required: false
-      allowedShapes:
-        type: API_VariableDataShape[]
-        required: false
-      description: string
-  VisualizationDataElementConstraintPattern:
-    type: object
-    properties:
-      //: VisualizationDataElementConstraint
   API_Filter:
     type: object
     discriminator: type
@@ -125,6 +105,12 @@ types:
       functionName: string
       inputVars: VariableSpec[]
       config: object # TBD
+  ComputeSpecForMerging:
+    type: object
+    additionalProperties: false
+    properties:
+      computeName: string
+      computeConfig: ComputeConfigBase
   MergedEntityTabularPostRequest:
     type: object
     additionalProperties: false
@@ -134,6 +120,7 @@ types:
       entityId: string
       outputVariables: VariableSpec[]
       derivedVariables: DerivedVariable[]
+      computeSpec?: ComputeSpecForMerging
   EntityCountPostRequest:
     type: object
     additionalProperties: false
@@ -183,6 +170,11 @@ types:
     enum:
       - standard
       - display
+  DataSourceType:
+    type: string
+    enum:
+      - database
+      - file
   API_TabularReportConfig:
     type: object
     properties:
@@ -190,6 +182,7 @@ types:
       paging?: API_PagingConfig
       headerFormat?: TabularHeaderFormat
       trimTimeFromDateVars?: boolean
+      dataSource?: DataSourceType
   BinUnits:
     type: string
     enum:
@@ -449,4 +442,72 @@ types:
     discriminatorValue: date
     properties:
       distributionDefaults: API_DateDistributionDefaults
+  JobID: !include https://raw.githubusercontent.com/VEuPathDB/lib-hash-id/v1.1.0/schema/hash-id.raml
+  JobStatus:
+    type: string
+    enum:
+      - queued
+      - in-progress
+      - complete
+      - failed
+      - expired
+  JobResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      jobID: JobID
+      status: JobStatus
+      queuePosition:
+        type: integer
+        required: false
+        format: int32
+  ComputeRequestBase:
+    type: object
+    properties:
+      studyId: string
+      filters:
+        type: array
+        required: false
+        items: API_Filter
+      derivedVariables:
+        type: array
+        items: DerivedVariable
+  ComputeConfigBase:
+    type: object
+    properties:
+      outputEntityId: string
+  PlotReference:
+    type: object
+    additionalProperties: false
+    properties:
+      computedVariableId: string
+      variablePlotRef?: string
+      valuePlotRef?: string
+  ComputedVariableMetadata:
+    type: object
+    additionalProperties: false
+    properties:
+      computedVariables: API_VariableWithValues[]
+      computedCollections: API_Collection[]
+      plotReferences: PlotReference[]
+  VisualizationDataElementConstraint:
+    type: object
+    additionalProperties: false
+    properties:
+      isRequired: boolean
+      isTemporal: boolean
+      minNumVars: number
+      maxNumVars: number
+      maxNumValues: number
+      allowedTypes:
+        type: API_VariableType[]
+        required: false
+      allowedShapes:
+        type: API_VariableDataShape[]
+        required: false
+      description: string
+  VisualizationDataElementConstraintPattern:
+    type: object
+    properties:
+      //: VisualizationDataElementConstraint
 
