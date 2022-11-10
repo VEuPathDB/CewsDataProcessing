@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
@@ -82,7 +83,7 @@ public class MergeRequestProcessor {
 
     // create stream generator
     Function<StreamSpec, ResponseFuture> streamGenerator = spec -> subsetSvc
-        .getTabularDataStream(metadata, _filters, spec);
+        .getTabularDataStream(metadata, _filters, Optional.empty(), spec);
 
     return out -> {
 
