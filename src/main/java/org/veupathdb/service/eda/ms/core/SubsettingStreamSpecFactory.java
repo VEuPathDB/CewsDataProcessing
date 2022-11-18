@@ -60,8 +60,7 @@ public class SubsettingStreamSpecFactory {
         case INHERITED:
           accumulator.add(var);
           break;
-        case DERIVED_BY_REDUCTION:
-        case DERIVED_BY_TRANSFORM:
+        case DERIVED:
           findAllNeededVars(_metadata
               .findDerivedVariable(var)
               .orElseThrow()

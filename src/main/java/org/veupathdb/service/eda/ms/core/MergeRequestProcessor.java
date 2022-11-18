@@ -42,7 +42,7 @@ public class MergeRequestProcessor {
   private final String _studyId;
   private final List<APIFilter> _filters;
   private final String _targetEntityId;
-  private final List<DerivedVariable> _derivedVariables;
+  private final List<DerivedVariableSpec> _derivedVariables;
   private final List<VariableSpec> _outputVarSpecs;
   private final ComputeSpecForMerging _computeRequestSpec;
   private final Entry<String, String> _authHeader;

@@ -10,7 +10,7 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.ms.core.derivedvars.plugin.Reduction;
+import org.veupathdb.service.eda.common.derivedvars.plugin.Reduction;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 
