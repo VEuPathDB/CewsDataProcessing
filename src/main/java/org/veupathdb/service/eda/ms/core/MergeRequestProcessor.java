@@ -113,7 +113,7 @@ public class MergeRequestProcessor {
     LOG.info("All requested streams (" + requiredStreams.size() + ") ready for consumption");
 
     EntityStream targetEntityStream =
-        requiredStreams.size() == 1 && metadata.getDerivedVariables().isEmpty() ?
+        requiredStreams.size() == 1 && metadata.getDerivedVariableSpecs().isEmpty() ?
         // speed optimized by directly copying a single stream's result into the output
         new EntityStream(requiredStreams.values().iterator().next(), dataStreams.values().iterator().next(), metadata) :
         // more then one stream requires merge logic

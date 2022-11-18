@@ -64,7 +64,7 @@ public class SubsettingStreamSpecFactory {
           findAllNeededVars(_metadata
               .findDerivedVariable(var)
               .orElseThrow()
-              .getInputVars()
+              .getRequiredInputVars()
               .stream()
               .map(spec -> _metadata.getVariable(spec).orElseThrow())
               .collect(Collectors.toList()),

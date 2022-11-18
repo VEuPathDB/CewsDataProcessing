@@ -7,305 +7,6 @@
 ################################################################################
 
 types:
-  JobID: !include https://raw.githubusercontent.com/VEuPathDB/lib-hash-id/v1.1.0/schema/hash-id.raml
-  JobStatus:
-    type: string
-    enum:
-      - queued
-      - in-progress
-      - complete
-      - failed
-      - expired
-  JobResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      jobID: JobID
-      status: JobStatus
-      queuePosition:
-        type: integer
-        required: false
-        format: int32
-  ComputeRequestBase:
-    type: object
-    properties:
-      studyId: string
-      filters:
-        type: array
-        required: false
-        items: API_Filter
-      derivedVariables:
-        type: array
-        items: DerivedVariableSpec
-  ComputeConfigBase:
-    type: object
-    properties:
-      outputEntityId: string
-  PlotReference:
-    type: object
-    additionalProperties: false
-    properties:
-      computedVariableId: string
-      variablePlotRef?: string
-  ComputedVariableMetadata:
-    type: object
-    additionalProperties: false
-    properties:
-      computedVariables: API_VariableWithValues[]
-      computedCollections: API_Collection[]
-      plotReferences: PlotReference[]
-  VisualizationDataElementConstraint:
-    type: object
-    additionalProperties: false
-    properties:
-      isRequired: boolean
-      isTemporal: boolean
-      minNumVars: number
-      maxNumVars: number
-      minNumValues: number
-      maxNumValues: number
-      allowedTypes:
-        type: API_VariableType[]
-        required: false
-      allowedShapes:
-        type: API_VariableDataShape[]
-        required: false
-      description: string
-  VisualizationDataElementConstraintPattern:
-    type: object
-    properties:
-      //: VisualizationDataElementConstraint
-  API_Filter:
-    type: object
-    discriminator: type
-    properties:
-      entityId: string
-      type: API_FilterType
-  API_FilterType:
-    type: string
-    enum:
-      - stringSet
-      - numberSet
-      - dateSet
-      - numberRange
-      - dateRange
-      - longitudeRange
-      - multiFilter
-  API_BooleanOperationType:
-    type: string
-    enum:
-      - intersect
-      - union
-  API_MultiFilterSubFilter:
-    type: object
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_MultiFilter:
-    type: API_Filter
-    discriminatorValue: 'multiFilter'
-    properties:
-      operation: API_BooleanOperationType
-      variableId: string
-      subFilters: API_MultiFilterSubFilter[]
-  API_StringSetFilter:
-    type: API_Filter
-    discriminatorValue: 'stringSet'
-    properties:
-      variableId: string
-      stringSet: string[]
-  API_NumberSetFilter:
-    type: API_Filter
-    discriminatorValue: 'numberSet'
-    properties:
-      variableId: string
-      numberSet: number[]
-  API_DateSetFilter:
-    type: API_Filter
-    discriminatorValue: 'dateSet'
-    properties:
-      variableId: string
-      dateSet: string[] # how to constrain this to a date?
-  API_NumberRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'numberRange'
-    properties:
-      variableId: string
-      min: number
-      max: number
-  API_DateRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'dateRange'
-    properties:
-      variableId: string
-      min: string
-      max: string
-  API_LongitudeRangeFilter:
-    type: API_Filter
-    discriminatorValue: 'longitudeRange'
-    properties:
-      variableId: string
-      left: number
-      right: number
-  VariableSpec:
-    type: object
-    additionalProperties: false
-    properties:
-      entityId: string
-      variableId: string
-  CollectionSpec:
-    type: object
-    additionalProperties: false
-    properties:
-      entityId: string
-      collectionId: string
-  DerivedVariableSpec:
-    type: VariableSpec
-    properties:
-      functionName: string
-      inputVars: VariableSpec[]
-      config: object # TBD
-  ComputeSpecForMerging:
-    type: object
-    additionalProperties: false
-    properties:
-      computeName: string
-      computeConfig: ComputeConfigBase
-  MergedEntityTabularPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      studyId: string
-      filters: API_Filter[]
-      entityId: string
-      outputVariables: VariableSpec[]
-      derivedVariables: DerivedVariableSpec[]
-      computeSpec?: ComputeSpecForMerging
-  EntityCountPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      filters: API_Filter[]
-  EntityCountPostResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      count:
-        type: integer
-        format: int64
-  EntityTabularPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      filters: API_Filter[]
-      outputVariableIds: string[]
-      reportConfig?: API_TabularReportConfig
-  EntityTabularPostResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      counts: string[][]
-  SortDirection:
-    type: string
-    enum:
-      - asc
-      - desc
-  SortSpecEntry:
-    type: object
-    additionalProperties: false
-    properties:
-      key: string
-      direction: SortDirection
-  API_PagingConfig:
-    type: object
-    properties:
-      numRows?:
-        type: integer
-        format: int64
-      offset?:
-        type: integer
-        format: int64
-  TabularHeaderFormat:
-    type: string
-    enum:
-      - standard
-      - display
-  DataSourceType:
-    type: string
-    enum:
-      - database
-      - file
-  API_TabularReportConfig:
-    type: object
-    properties:
-      sorting?: SortSpecEntry[]
-      paging?: API_PagingConfig
-      headerFormat?: TabularHeaderFormat
-      trimTimeFromDateVars?: boolean
-      dataSource?: DataSourceType
-  BinUnits:
-    type: string
-    enum:
-      - day
-      - week
-      - month
-      - year
-  BinSpecWithRange:
-    type: object
-    additionalProperties: false
-    properties:
-      displayRangeMin: any
-      displayRangeMax: any
-      binWidth: number
-      binUnits?: BinUnits
-  ValueSpec:
-    type: string
-    enum:
-      - count
-      - proportion
-  VariableDistributionPostRequest:
-    type: object
-    additionalProperties: false
-    properties:
-      filters: API_Filter[]
-      binSpec?: BinSpecWithRange
-      valueSpec: ValueSpec
-  HistogramBin:
-    type: object
-    additionalProperties: false
-    properties:
-      value: number
-      binStart: string
-      binEnd: string
-      binLabel: string
-  HistogramStats:
-    type: object
-    additionalProperties: false
-    properties:
-      subsetSize:
-        type: integer
-        format: int64
-      subsetMin?: any
-      subsetMax?: any
-      subsetMean?: any
-      numVarValues:
-        type: integer
-        format: int64
-      numDistinctValues:
-        type: integer
-        format: int64
-      numDistinctEntityRecords:
-        type: integer
-        format: int64
-      numMissingCases:
-        type: integer
-        format: int64
-  VariableDistributionPostResponse:
-    type: object
-    additionalProperties: false
-    properties:
-      histogram: HistogramBin[]
-      statistics: HistogramStats
   StudiesGetResponse:
     type: object
     additionalProperties: false
@@ -502,4 +203,334 @@ types:
     discriminatorValue: date
     properties:
       distributionDefaults: API_DateDistributionDefaults
+  VariableClass:
+    type: string
+    enum:
+      - native
+      - derived
+      - computed
+  PlotReferenceValue:
+    type: string
+    enum:
+      - xAxis
+      - yAxis
+      - zAxis
+      - overlay
+      - facet1
+      - facet2
+      - geo
+      - latitude
+      - longitude
+  VariableMapping:
+    type: object
+    additionalProperties: false
+    properties:
+      variableClass: VariableClass
+      variableSpec: VariableSpec
+      plotReference: PlotReferenceValue
+      dataType: API_VariableType
+      dataShape: API_VariableDataShape
+      displayName?: string
+      displayRangeMin?: any
+      displayRangeMax?: any
+      vocabulary?: string[]
+      isCollection: boolean
+      imputeZero: boolean
+      members?: VariableSpec[]
+  EmptyResponse:
+    type: object
+    additionalProperties: false
+  VisualizationDataElementConstraint:
+    type: object
+    additionalProperties: false
+    properties:
+      isRequired: boolean
+      isTemporal: boolean
+      minNumVars: number
+      maxNumVars: number
+      minNumValues: number
+      maxNumValues: number
+      allowedTypes:
+        type: API_VariableType[]
+        required: false
+      allowedShapes:
+        type: API_VariableDataShape[]
+        required: false
+      description: string
+  VisualizationDataElementConstraintPattern:
+    type: object
+    properties:
+      //: VisualizationDataElementConstraint
+  JobID: !include https://raw.githubusercontent.com/VEuPathDB/lib-hash-id/v1.1.0/schema/hash-id.raml
+  JobStatus:
+    type: string
+    enum:
+      - queued
+      - in-progress
+      - complete
+      - failed
+      - expired
+  JobResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      jobID: JobID
+      status: JobStatus
+      queuePosition:
+        type: integer
+        required: false
+        format: int32
+  ComputeRequestBase:
+    type: object
+    properties:
+      studyId: string
+      filters:
+        type: array
+        required: false
+        items: API_Filter
+      derivedVariables:
+        type: array
+        items: DerivedVariableSpec
+  ComputeConfigBase:
+    type: object
+    properties:
+      outputEntityId: string
+  ComputedVariableMetadata:
+    type: object
+    additionalProperties: false
+    properties:
+      variables: VariableMapping[]
+  API_Filter:
+    type: object
+    discriminator: type
+    properties:
+      entityId: string
+      type: API_FilterType
+  API_FilterType:
+    type: string
+    enum:
+      - stringSet
+      - numberSet
+      - dateSet
+      - numberRange
+      - dateRange
+      - longitudeRange
+      - multiFilter
+  API_BooleanOperationType:
+    type: string
+    enum:
+      - intersect
+      - union
+  API_MultiFilterSubFilter:
+    type: object
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_MultiFilter:
+    type: API_Filter
+    discriminatorValue: 'multiFilter'
+    properties:
+      operation: API_BooleanOperationType
+      variableId: string
+      subFilters: API_MultiFilterSubFilter[]
+  API_StringSetFilter:
+    type: API_Filter
+    discriminatorValue: 'stringSet'
+    properties:
+      variableId: string
+      stringSet: string[]
+  API_NumberSetFilter:
+    type: API_Filter
+    discriminatorValue: 'numberSet'
+    properties:
+      variableId: string
+      numberSet: number[]
+  API_DateSetFilter:
+    type: API_Filter
+    discriminatorValue: 'dateSet'
+    properties:
+      variableId: string
+      dateSet: string[] # how to constrain this to a date?
+  API_NumberRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'numberRange'
+    properties:
+      variableId: string
+      min: number
+      max: number
+  API_DateRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'dateRange'
+    properties:
+      variableId: string
+      min: string
+      max: string
+  API_LongitudeRangeFilter:
+    type: API_Filter
+    discriminatorValue: 'longitudeRange'
+    properties:
+      variableId: string
+      left: number
+      right: number
+  VariableSpec:
+    type: object
+    additionalProperties: false
+    properties:
+      entityId: string
+      variableId: string
+  CollectionSpec:
+    type: object
+    additionalProperties: false
+    properties:
+      entityId: string
+      collectionId: string
+  DerivedVariableSpec:
+    type: VariableSpec
+    properties:
+      expectedVariableType: API_VariableType
+      expectedVariableDataShape: API_VariableDataShape
+      functionName: string
+      inputVars: VariableSpec[]
+      config: object # TBD
+  ComputeSpecForMerging:
+    type: object
+    additionalProperties: false
+    properties:
+      computeName: string
+      computeConfig: ComputeConfigBase
+  MergedEntityTabularPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      studyId: string
+      filters: API_Filter[]
+      entityId: string
+      outputVariables: VariableSpec[]
+      derivedVariables: DerivedVariableSpec[]
+      computeSpec?: ComputeSpecForMerging
+  EntityCountPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      filters: API_Filter[]
+  EntityCountPostResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      count:
+        type: integer
+        format: int64
+  EntityTabularPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      filters: API_Filter[]
+      outputVariableIds: string[]
+      reportConfig?: API_TabularReportConfig
+  EntityTabularPostResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      counts: string[][]
+  SortDirection:
+    type: string
+    enum:
+      - asc
+      - desc
+  SortSpecEntry:
+    type: object
+    additionalProperties: false
+    properties:
+      key: string
+      direction: SortDirection
+  API_PagingConfig:
+    type: object
+    properties:
+      numRows?:
+        type: integer
+        format: int64
+      offset?:
+        type: integer
+        format: int64
+  TabularHeaderFormat:
+    type: string
+    enum:
+      - standard
+      - display
+  DataSourceType:
+    type: string
+    enum:
+      - database
+      - file
+  API_TabularReportConfig:
+    type: object
+    properties:
+      sorting?: SortSpecEntry[]
+      paging?: API_PagingConfig
+      headerFormat?: TabularHeaderFormat
+      trimTimeFromDateVars?: boolean
+      dataSource?: DataSourceType
+  BinUnits:
+    type: string
+    enum:
+      - day
+      - week
+      - month
+      - year
+  BinSpecWithRange:
+    type: object
+    additionalProperties: false
+    properties:
+      displayRangeMin: any
+      displayRangeMax: any
+      binWidth: number
+      binUnits?: BinUnits
+  ValueSpec:
+    type: string
+    enum:
+      - count
+      - proportion
+  VariableDistributionPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      filters: API_Filter[]
+      binSpec?: BinSpecWithRange
+      valueSpec: ValueSpec
+  HistogramBin:
+    type: object
+    additionalProperties: false
+    properties:
+      value: number
+      binStart: string
+      binEnd: string
+      binLabel: string
+  HistogramStats:
+    type: object
+    additionalProperties: false
+    properties:
+      subsetSize:
+        type: integer
+        format: int64
+      subsetMin?: any
+      subsetMax?: any
+      subsetMean?: any
+      numVarValues:
+        type: integer
+        format: int64
+      numDistinctValues:
+        type: integer
+        format: int64
+      numDistinctEntityRecords:
+        type: integer
+        format: int64
+      numMissingCases:
+        type: integer
+        format: int64
+  VariableDistributionPostResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      histogram: HistogramBin[]
+      statistics: HistogramStats
 
