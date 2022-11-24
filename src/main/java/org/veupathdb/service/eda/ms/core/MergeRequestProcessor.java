@@ -12,6 +12,8 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
@@ -21,6 +23,7 @@ import org.gusdb.fgputil.iterator.IteratorUtil;
 import org.gusdb.fgputil.json.JsonUtil;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.EdaComputeClient;
+import org.veupathdb.service.eda.common.client.EdaComputeClient.ComputeRequestBody;
 import org.veupathdb.service.eda.common.client.EdaSubsettingClient;
 import org.veupathdb.service.eda.common.client.StreamingDataClient;
 import org.veupathdb.service.eda.common.client.spec.EdaMergingSpecValidator;
@@ -38,6 +41,8 @@ import static org.gusdb.fgputil.FormatUtil.TAB;
 public class MergeRequestProcessor {
 
   private static final Logger LOG = LogManager.getLogger(MergeRequestProcessor.class);
+
+  public static final String COMPUTED_VAR_STREAM_NAME = "__COMPUTED_VAR_STREAM__";
 
   private final String _studyId;
   private final List<APIFilter> _filters;
@@ -71,7 +76,7 @@ public class MergeRequestProcessor {
 
     // validation of incoming request
     //  (validation based specifically on the requested entity done during spec creation)
-    validateIncomingRequest(_targetEntityId, _outputVarSpecs, metadata);
+    validateIncomingRequest(_targetEntityId, _outputVarSpecs, metadata, _computeRequestSpec);
 
     // request validated; convert requested entity and vars to defs
     EntityDef targetEntity = metadata.getEntity(_targetEntityId).orElseThrow();
@@ -81,29 +86,53 @@ public class MergeRequestProcessor {
     Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, outputVars).createSpecs();
     List<StreamSpec> requiredStreamList = new ArrayList<>(requiredStreams.values());
 
+    // add stream spec for compute if compute config appended on request TODO: validate against target entity!
+    if (_computeRequestSpec != null) {
+      requiredStreamList.add(new StreamSpec(COMPUTED_VAR_STREAM_NAME, _computeRequestSpec.getComputeConfig().getOutputEntityId()));
+    }
+
     // create stream generator
-    Function<StreamSpec, ResponseFuture> streamGenerator = spec -> subsetSvc
-        .getTabularDataStream(metadata, _filters, Optional.empty(), spec);
+    Function<StreamSpec, ResponseFuture> streamGenerator = spec ->
+        COMPUTED_VAR_STREAM_NAME.equals(spec.getStreamName())
+        // need to get compute stream from compute service
+        ? computeSvc.getJobTabularOutput(_computeRequestSpec.getComputeName(),
+            new ComputeRequestBody(metadata.getStudyId(), _filters, _derivedVariables, _computeRequestSpec.getComputeConfig()))
+        // all other streams come from subsetting service
+        : subsetSvc.getTabularDataStream(metadata, _filters, Optional.empty(), spec);
 
     return out -> {
 
       // create stream processor
       ConsumerWithException<Map<String,InputStream>> streamProcessor = dataStreams ->
-          writeMergedStream(metadata, targetEntity,
-              outputVars, requiredStreams, dataStreams, out);
+          writeMergedStream(metadata, targetEntity, outputVars, requiredStreams, dataStreams, out);
 
       // build and process streams
       StreamingDataClient.buildAndProcessStreams(requiredStreamList, streamGenerator, streamProcessor);
     };
   }
 
-  private static void validateIncomingRequest(String targetEntityId,
-      List<VariableSpec> outputVars, ReferenceMetadata metadata) throws ValidationException {
+  private static void validateIncomingRequest(
+      String targetEntityId,
+      List<VariableSpec> outputVars,
+      ReferenceMetadata metadata,
+      ComputeSpecForMerging computeRequestSpec) throws ValidationException {
     StreamSpec requestSpec = new StreamSpec("incoming", targetEntityId);
     requestSpec.addAll(outputVars);
     new EdaMergingSpecValidator()
       .validateStreamSpecs(ListBuilder.asList(requestSpec), metadata)
       .throwIfInvalid();
+
+    // no need to check compute if it doesn't exist
+    if (computeRequestSpec == null) return;
+
+    // compute present; make sure computed var entity is the same as, or an ancestor of the target entity (needed for now)
+    Predicate<String> isComputeVarEntity = entityId -> entityId.equals(computeRequestSpec.getComputeConfig().getOutputEntityId());
+    if (!isComputeVarEntity.test(targetEntityId) && metadata
+        .getAncestors(metadata.getEntity(targetEntityId).orElseThrow()).stream()
+        .filter(entity -> isComputeVarEntity.test(entity.getId()))
+        .findFirst().isEmpty()) {
+      throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
+    }
   }
 
   private static void writeMergedStream(ReferenceMetadata metadata, EntityDef targetEntity,
@@ -116,7 +145,7 @@ public class MergeRequestProcessor {
         requiredStreams.size() == 1 && metadata.getDerivedVariableSpecs().isEmpty() ?
         // speed optimized by directly copying a single stream's result into the output
         new EntityStream(requiredStreams.values().iterator().next(), dataStreams.values().iterator().next(), metadata) :
-        // more then one stream requires merge logic
+        // more than one stream requires merge logic
         new TargetEntityStream(targetEntity, outputVars, metadata, requiredStreams, dataStreams);
 
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
