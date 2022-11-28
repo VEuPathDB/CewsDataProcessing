@@ -11,8 +11,10 @@ import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.common.derivedvars.plugin.Reduction;
+import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
+import static org.veupathdb.service.eda.ms.core.MergeRequestProcessor.COMPUTED_VAR_STREAM_NAME;
 
 public class RootEntityStream extends EntityStream {
 
@@ -20,20 +22,30 @@ public class RootEntityStream extends EntityStream {
 
   private final Map<String, EntityStream> _descendantStreams;
 
-  public RootEntityStream(EntityDef targetEntity, ReferenceMetadata metadata,
+  private final Optional<EntityStream> _computeStream;
+
+  public RootEntityStream(EntityDef entityOfStream, Optional<EntityDef> computeEntity, ReferenceMetadata metadata,
       Map<String, StreamSpec> streamSpecs, Map<String, InputStream> dataStreams,
       List<String> descendantsToExclude) {
-    super(streamSpecs.get(targetEntity.getId()), dataStreams.get(targetEntity.getId()), metadata);
+    super(streamSpecs.get(entityOfStream.getId()), dataStreams.get(entityOfStream.getId()), metadata);
 
     // cache the name of the column used to identify records that match the current row
     _entityIdColName = VariableDef.toDotNotation(getEntity().getIdColumnDef());
 
     // build descendant streams for any required descendants
-    _descendantStreams = metadata.getDescendants(targetEntity).stream()
+    _descendantStreams = metadata.getDescendants(entityOfStream).stream()
         .filter(entity -> !descendantsToExclude.contains(entity.getId()))
         .filter(entity -> dataStreams.containsKey(entity.getId()))
         .map(entity -> new EntityStream(streamSpecs.get(entity.getId()), dataStreams.get(entity.getId()), metadata))
         .collect(newLinkedHashMapCollector(e -> e.getEntity().getId()));
+
+    // build a sibling stream for computed vars if requested and matches the entity of this stream
+    _computeStream = computeEntity
+        .filter(entity -> entity.getId().equals(entityOfStream.getId()))
+        .map(entity -> new EntityStream(
+            streamSpecs.get(COMPUTED_VAR_STREAM_NAME),
+            dataStreams.get(COMPUTED_VAR_STREAM_NAME),
+            metadata));
   }
 
   protected String getEntityIdColName() {
@@ -71,6 +83,22 @@ public class RootEntityStream extends EntityStream {
         nativeVars.put(reduction.getOutputColumnName(), reduction.getResultingValue());
       }
     }
+
+    // add computed vars from this row's computed
+    _computeStream.ifPresent(stream -> {
+      // make sure a computed row is present for this row
+      if (!stream.hasNext())
+        throw new IllegalStateException("Computed data column does not have enough rows for this subset");
+      // read the row
+      Map<String,String> nextComputedRow = stream.next();
+      // make sure ID matches
+      if (!nativeVars.get(_entityIdColName).equals(nextComputedRow.get(_entityIdColName))) {
+        throw new IllegalStateException("Computed row entity ID '" + nextComputedRow.get(_entityIdColName) +
+            " does not match expected ID " + nativeVars.get(_entityIdColName));
+      }
+      // add values to row
+      nativeVars.putAll(nextComputedRow);
+    });
 
     // apply transforms again in case they rely on reduction vars
     return applyTransforms(nativeVars);

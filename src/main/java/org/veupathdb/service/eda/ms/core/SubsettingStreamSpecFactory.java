@@ -1,9 +1,6 @@
 package org.veupathdb.service.eda.ms.core;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,11 +18,13 @@ public class SubsettingStreamSpecFactory {
 
   private final ReferenceMetadata _metadata;
   private final EntityDef _targetEntity;
+  private final Optional<EntityDef> _computedEntity;
   private final List<VariableDef> _outputVars;
 
-  public SubsettingStreamSpecFactory(ReferenceMetadata metadata, EntityDef targetEntity, List<VariableDef> outputVars) {
+  public SubsettingStreamSpecFactory(ReferenceMetadata metadata, EntityDef targetEntity, Optional<EntityDef> computedEntity, List<VariableDef> outputVars) {
     _metadata = metadata;
     _targetEntity = targetEntity;
+    _computedEntity = computedEntity;
     _outputVars = outputVars;
   }
 
@@ -39,6 +38,11 @@ public class SubsettingStreamSpecFactory {
     // even if no vars are required of the target entity, still need a stream for the target
     if (!sortedVars.containsKey(_targetEntity.getId())) {
       sortedVars.put(_targetEntity.getId(), Collections.emptyList());
+    }
+
+    // even if no vars are required of the target entity, still need a stream for a computed entity if computed vars present
+    if (_computedEntity.isPresent() && !sortedVars.containsKey(_computedEntity.get().getId())) {
+      sortedVars.put(_computedEntity.get().getId(), Collections.emptyList());
     }
 
     // convert sorted vars to stream specs

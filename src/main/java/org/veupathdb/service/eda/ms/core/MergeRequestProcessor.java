@@ -13,7 +13,9 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
+import jakarta.ws.rs.BadRequestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
@@ -80,23 +82,22 @@ public class MergeRequestProcessor {
 
     // request validated; convert requested entity and vars to defs
     EntityDef targetEntity = metadata.getEntity(_targetEntityId).orElseThrow();
-    List<VariableDef> outputVars = metadata.getTabularColumns(targetEntity, _outputVarSpecs);
+    List<VariableDef> outputVarDefs = metadata.getTabularColumns(targetEntity, _outputVarSpecs);
+    List<VariableSpec> outputVars = new ArrayList<>(outputVarDefs.stream().map(v -> (VariableSpec)v).toList());
 
     // build specs for streams to be merged into this request's response
-    Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, outputVars).createSpecs();
-    List<StreamSpec> requiredStreamList = new ArrayList<>(requiredStreams.values());
+    Optional<EntityDef> computedEntity = Optional.ofNullable(_computeRequestSpec)
+        .map(spec -> metadata.getEntity(spec.getComputeConfig().getOutputEntityId()).orElseThrow());
+    Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, computedEntity, outputVarDefs).createSpecs();
 
     // add stream spec for compute if compute config appended on request TODO: validate against target entity!
-    if (_computeRequestSpec != null) {
-      requiredStreamList.add(new StreamSpec(COMPUTED_VAR_STREAM_NAME, _computeRequestSpec.getComputeConfig().getOutputEntityId()));
-    }
+    ComputeRequestBody computeRequestBody = addComputedDataSpecs(metadata, computeSvc, requiredStreams, outputVars);
 
     // create stream generator
     Function<StreamSpec, ResponseFuture> streamGenerator = spec ->
         COMPUTED_VAR_STREAM_NAME.equals(spec.getStreamName())
         // need to get compute stream from compute service
-        ? computeSvc.getJobTabularOutput(_computeRequestSpec.getComputeName(),
-            new ComputeRequestBody(metadata.getStudyId(), _filters, _derivedVariables, _computeRequestSpec.getComputeConfig()))
+        ? computeSvc.getJobTabularOutput(_computeRequestSpec.getComputeName(), computeRequestBody)
         // all other streams come from subsetting service
         : subsetSvc.getTabularDataStream(metadata, _filters, Optional.empty(), spec);
 
@@ -104,11 +105,44 @@ public class MergeRequestProcessor {
 
       // create stream processor
       ConsumerWithException<Map<String,InputStream>> streamProcessor = dataStreams ->
-          writeMergedStream(metadata, targetEntity, outputVars, requiredStreams, dataStreams, out);
+          writeMergedStream(metadata, targetEntity, computedEntity, outputVars, requiredStreams, dataStreams, out);
 
       // build and process streams
-      StreamingDataClient.buildAndProcessStreams(requiredStreamList, streamGenerator, streamProcessor);
+      StreamingDataClient.buildAndProcessStreams(new ArrayList<>(requiredStreams.values()), streamGenerator, streamProcessor);
     };
+  }
+
+  private ComputeRequestBody addComputedDataSpecs(
+      ReferenceMetadata metadata,
+      EdaComputeClient computeSvc,
+      Map<String, StreamSpec> requiredStreams,
+      List<VariableSpec> outputVars) {
+
+    // if no compute spec sent, don't need to add stream and can return null here
+    if (_computeRequestSpec == null) return null;
+
+    // create a request body from parts of the merge service request
+    ComputeRequestBody computeRequestBody = new ComputeRequestBody(metadata.getStudyId(),
+        _filters, _derivedVariables, _computeRequestSpec.getComputeConfig());
+
+    // check for results availability first
+    if (!computeSvc.isJobResultsAvailable(_computeRequestSpec.getComputeName(), computeRequestBody))
+      throw new BadRequestException("Results not ready for specified compute job.");
+
+    // create variable specs from computed var metadata
+    List<VariableSpec> computedVars = computeSvc
+        .getJobVariableMetadata(_computeRequestSpec.getComputeName(), computeRequestBody)
+        .getVariables().stream()
+        .map(VariableMapping::getVariableSpec)
+        .collect(Collectors.toList());
+
+    // use computed var specs to create a stream spec and add them to output vars
+    requiredStreams.put(COMPUTED_VAR_STREAM_NAME, new StreamSpec(COMPUTED_VAR_STREAM_NAME,
+        _computeRequestSpec.getComputeConfig().getOutputEntityId()).addVars(computedVars));
+    outputVars.addAll(computedVars);
+
+    // return compute request for use in tabular request
+    return computeRequestBody;
   }
 
   private static void validateIncomingRequest(
@@ -136,7 +170,7 @@ public class MergeRequestProcessor {
   }
 
   private static void writeMergedStream(ReferenceMetadata metadata, EntityDef targetEntity,
-      List<VariableDef> outputVars, Map<String, StreamSpec> requiredStreams,
+      Optional<EntityDef> computedEntity, List<VariableSpec> outputVars, Map<String, StreamSpec> requiredStreams,
       Map<String, InputStream> dataStreams, OutputStream out) {
 
     LOG.info("All requested streams (" + requiredStreams.size() + ") ready for consumption");
@@ -146,7 +180,7 @@ public class MergeRequestProcessor {
         // speed optimized by directly copying a single stream's result into the output
         new EntityStream(requiredStreams.values().iterator().next(), dataStreams.values().iterator().next(), metadata) :
         // more than one stream requires merge logic
-        new TargetEntityStream(targetEntity, outputVars, metadata, requiredStreams, dataStreams);
+        new TargetEntityStream(targetEntity, computedEntity, outputVars, metadata, requiredStreams, dataStreams);
 
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
 
