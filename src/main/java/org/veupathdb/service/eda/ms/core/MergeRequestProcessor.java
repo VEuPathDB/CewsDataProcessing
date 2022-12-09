@@ -62,7 +62,6 @@ public class MergeRequestProcessor {
     _authHeader = authHeader;
     _computeInfo = Optional.ofNullable(request.getComputeSpec()).map(spec -> new TwoTuple<>(spec.getComputeName(),
         new ComputeRequestBody(_studyId, _filters, _derivedVariables, spec.getComputeConfig())));
-
   }
 
   public Consumer<OutputStream> createMergedResponseSupplier() throws ValidationException {
@@ -133,9 +132,17 @@ public class MergeRequestProcessor {
     if (varMappings.isEmpty()) return;
 
     // create variable specs from computed var metadata
-    List<VariableSpec> computedVars = varMappings.stream()
-        .map(VariableMapping::getVariableSpec)
-        .collect(Collectors.toList());
+    List<VariableSpec> computedVars = new ArrayList<>();
+    varMappings.forEach(varMapping -> {
+      if (varMapping.getIsCollection()) {
+        // for collection vars, expect columns for each member
+        computedVars.addAll(varMapping.getMembers());
+      }
+      else {
+        // for non-collections, add the mapping's spec
+        computedVars.add(varMapping.getVariableSpec());
+      }
+    });
 
     // use computed var specs to create a stream spec and add them to output vars
     requiredStreams.put(COMPUTED_VAR_STREAM_NAME, new StreamSpec(COMPUTED_VAR_STREAM_NAME,
