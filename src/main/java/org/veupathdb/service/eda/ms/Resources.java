@@ -19,6 +19,7 @@ public class Resources extends ContainerResources {
       Boolean.valueOf(getOptionalVar("DEVELOPMENT_MODE", "false"));
 
   public static final String SUBSETTING_SERVICE_URL = getRequiredVar("SUBSETTING_SERVICE_URL");
+  public static final String COMPUTE_SERVICE_URL = getRequiredVar("COMPUTE_SERVICE_URL");
 
   public Resources(Options opts) {
     super(opts);

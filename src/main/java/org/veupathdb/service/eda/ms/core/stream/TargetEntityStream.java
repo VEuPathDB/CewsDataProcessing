@@ -8,22 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
+import org.veupathdb.service.eda.generated.model.VariableSpec;
 
 public class TargetEntityStream extends RootEntityStream {
 
   private final List<String> _outputVars;
   private final Map<String, RootEntityStream> _ancestorStreams;
 
-  public TargetEntityStream(EntityDef targetEntity,
-      List<VariableDef> outputVars, ReferenceMetadata metadata,
-      Map<String, StreamSpec> streamSpecs, Map<String, InputStream> dataStreams) {
+  public TargetEntityStream(EntityDef targetEntity, Optional<EntityDef> computedEntity,
+                            List<VariableSpec> outputVars, ReferenceMetadata metadata,
+                            Map<String, StreamSpec> streamSpecs, Map<String, InputStream> dataStreams) {
     // target stream is a special root stream which excludes no children
-    super(targetEntity, metadata, streamSpecs, dataStreams, Collections.emptyList());
+    super(targetEntity, computedEntity, metadata, streamSpecs, dataStreams, Collections.emptyList());
 
     // header names for values we will return
     _outputVars = VariableDef.toDotNotation(outputVars);
@@ -36,7 +36,7 @@ public class TargetEntityStream extends RootEntityStream {
       if (dataStreams.containsKey(entity.getId())) {
         List<String> descendantsToExclude = getSubtreeEntityIds(i == 0 ? targetEntity : ancestors.get(i - 1));
         _ancestorStreams.put(entity.getId(),
-            new RootEntityStream(entity, metadata, streamSpecs, dataStreams, descendantsToExclude));
+            new RootEntityStream(entity, computedEntity, metadata, streamSpecs, dataStreams, descendantsToExclude));
 
       }
     }
@@ -48,7 +48,7 @@ public class TargetEntityStream extends RootEntityStream {
     subtreeIds.addAll(_metadata
         .getDescendants(rootEntity).stream()
         .map(EntityDef::getId)
-        .collect(Collectors.toList()));
+        .toList());
     return subtreeIds;
   }
 

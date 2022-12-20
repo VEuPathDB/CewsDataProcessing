@@ -18,8 +18,8 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.ms.core.derivedvars.DerivedVariableFactory;
-import org.veupathdb.service.eda.ms.core.derivedvars.plugin.Transform;
+import org.veupathdb.service.eda.common.derivedvars.DerivedVariableFactory;
+import org.veupathdb.service.eda.common.derivedvars.plugin.Transform;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 import static org.gusdb.fgputil.FormatUtil.TAB;

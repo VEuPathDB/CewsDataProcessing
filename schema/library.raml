@@ -7,6 +7,43 @@
 ################################################################################
 
 types:
+  VariableClass:
+    type: string
+    enum:
+      - native
+      - derived
+      - computed
+  PlotReferenceValue:
+    type: string
+    enum:
+      - xAxis
+      - yAxis
+      - zAxis
+      - overlay
+      - facet1
+      - facet2
+      - geo
+      - latitude
+      - longitude
+  VariableMapping:
+    type: object
+    additionalProperties: false
+    properties:
+      variableClass: VariableClass
+      variableSpec: VariableSpec
+      plotReference: PlotReferenceValue
+      dataType: API_VariableType
+      dataShape: API_VariableDataShape
+      displayName?: string
+      displayRangeMin?: any
+      displayRangeMax?: any
+      vocabulary?: string[]
+      isCollection: boolean
+      imputeZero: boolean
+      members?: VariableSpec[]
+  EmptyResponse:
+    type: object
+    additionalProperties: false
   VisualizationDataElementConstraint:
     type: object
     additionalProperties: false
@@ -15,6 +52,7 @@ types:
       isTemporal: boolean
       minNumVars: number
       maxNumVars: number
+      minNumValues: number
       maxNumValues: number
       allowedTypes:
         type: API_VariableType[]
@@ -27,6 +65,46 @@ types:
     type: object
     properties:
       //: VisualizationDataElementConstraint
+  JobID: !include https://raw.githubusercontent.com/VEuPathDB/lib-hash-id/v1.1.0/schema/hash-id.raml
+  JobStatus:
+    type: string
+    enum:
+      - no-such-job
+      - queued
+      - in-progress
+      - complete
+      - failed
+      - expired
+  JobResponse:
+    type: object
+    additionalProperties: false
+    properties:
+      jobID: JobID
+      status: JobStatus
+      queuePosition:
+        type: integer
+        required: false
+        format: int32
+  ComputeRequestBase:
+    type: object
+    properties:
+      studyId: string
+      filters:
+        type: array
+        required: false
+        items: API_Filter
+      derivedVariables:
+        type: array
+        items: DerivedVariableSpec
+  ComputeConfigBase:
+    type: object
+    properties:
+      outputEntityId: string
+  ComputedVariableMetadata:
+    type: object
+    additionalProperties: false
+    properties:
+      variables: VariableMapping[]
   API_Filter:
     type: object
     discriminator: type
@@ -111,20 +189,20 @@ types:
     properties:
       entityId: string
       collectionId: string
-  DerivationType:
-    type: string
-    enum:
-      - transform
-      - reduction
-  DerivedVariable:
+  DerivedVariableSpec:
     type: VariableSpec
     properties:
-      variableType: API_VariableType
-      variableDataShape: API_VariableDataShape
-      derivationType: DerivationType
+      expectedVariableType: API_VariableType
+      expectedVariableDataShape: API_VariableDataShape
       functionName: string
       inputVars: VariableSpec[]
       config: object # TBD
+  ComputeSpecForMerging:
+    type: object
+    additionalProperties: false
+    properties:
+      computeName: string
+      computeConfig: ComputeConfigBase
   MergedEntityTabularPostRequest:
     type: object
     additionalProperties: false
@@ -133,7 +211,8 @@ types:
       filters: API_Filter[]
       entityId: string
       outputVariables: VariableSpec[]
-      derivedVariables: DerivedVariable[]
+      derivedVariables: DerivedVariableSpec[]
+      computeSpec?: ComputeSpecForMerging
   EntityCountPostRequest:
     type: object
     additionalProperties: false
@@ -183,6 +262,11 @@ types:
     enum:
       - standard
       - display
+  DataSourceType:
+    type: string
+    enum:
+      - database
+      - file
   API_TabularReportConfig:
     type: object
     properties:
@@ -190,6 +274,7 @@ types:
       paging?: API_PagingConfig
       headerFormat?: TabularHeaderFormat
       trimTimeFromDateVars?: boolean
+      dataSource?: DataSourceType
   BinUnits:
     type: string
     enum:
