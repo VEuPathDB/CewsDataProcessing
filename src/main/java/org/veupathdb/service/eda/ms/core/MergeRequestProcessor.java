@@ -10,13 +10,11 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import jakarta.ws.rs.BadRequestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
-import org.gusdb.fgputil.Tuples.TwoTuple;
 import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.iterator.IteratorUtil;
@@ -49,7 +47,7 @@ public class MergeRequestProcessor {
   private final String _targetEntityId;
   private final List<DerivedVariableSpec> _derivedVariables;
   private final List<VariableSpec> _outputVarSpecs;
-  private final Optional<TwoTuple<String,ComputeRequestBody>> _computeInfo;
+  private final Optional<ComputeInfo> _computeInfo;
   private final Entry<String, String> _authHeader;
 
   public MergeRequestProcessor(MergedEntityTabularPostRequest request, Entry<String, String> authHeader) {
@@ -60,7 +58,8 @@ public class MergeRequestProcessor {
     _derivedVariables = request.getDerivedVariables();
     _outputVarSpecs = request.getOutputVariables();
     _authHeader = authHeader;
-    _computeInfo = Optional.ofNullable(request.getComputeSpec()).map(spec -> new TwoTuple<>(spec.getComputeName(),
+    _computeInfo = Optional.ofNullable(request.getComputeSpec())
+        .map(spec -> new ComputeInfo(spec.getComputeName(),
         new ComputeRequestBody(_studyId, _filters, _derivedVariables, spec.getComputeConfig())));
   }
 
@@ -74,18 +73,18 @@ public class MergeRequestProcessor {
     APIStudyDetail studyDetail = subsetSvc.getStudy(_studyId)
         .orElseThrow(() -> new ValidationException("No study found with ID " + _studyId));
 
-    // if compute specified, check if compute results are available
-    if (_computeInfo.isPresent() && !computeSvc.isJobResultsAvailable(_computeInfo.get().getFirst(), _computeInfo.get().getSecond())) {
-      throw new BadRequestException("Compute results are not available for the requested job.");
-    }
+    // if compute specified, check if compute results are available; throw if not, get computed metadata if so
+    _computeInfo.ifPresent(info -> {
+      if (!computeSvc.isJobResultsAvailable(info.getComputeName(), info.getRequestBody()))
+        throw new BadRequestException("Compute results are not available for the requested job.");
+      else
+        info.setMetadata(computeSvc.getJobVariableMetadata(info.getComputeName(), info.getRequestBody()));
+    });
 
-    // if compute specified, get computed var metadata
-    List<VariableMapping> computedVars = _computeInfo
-        .map(info -> computeSvc.getJobVariableMetadata(info.getFirst(), info.getSecond()).getVariables())
-        .orElse(Collections.emptyList());
 
     // create reference metadata using collected information
-    ReferenceMetadata metadata = new ReferenceMetadata(studyDetail, computedVars, _derivedVariables);
+    ReferenceMetadata metadata = new ReferenceMetadata(studyDetail,
+        _computeInfo.map(ComputeInfo::getVariables).orElse(Collections.emptyList()), _derivedVariables);
 
     // validation of incoming request
     //  (validation based specifically on the requested entity done during spec creation)
@@ -98,17 +97,17 @@ public class MergeRequestProcessor {
 
     // build specs for streams to be merged into this request's response
     Optional<EntityDef> computedEntity = _computeInfo
-        .map(info -> metadata.getEntity(info.getSecond().getConfig().getOutputEntityId()).orElseThrow());
+        .map(info -> metadata.getEntity(info.getComputeEntity()).orElseThrow());
     Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, computedEntity, outputVarDefs).createSpecs();
 
     // if computed vars present, add stream spec for compute and add computed vars to output columns
-    addComputedDataSpecs(computedVars, requiredStreams, outputVars);
+    addComputedDataSpecs(_computeInfo.map(ComputeInfo::getVariables).orElse(Collections.emptyList()), requiredStreams, outputVars);
 
     // create stream generator
     Function<StreamSpec, ResponseFuture> streamGenerator = spec ->
         COMPUTED_VAR_STREAM_NAME.equals(spec.getStreamName())
         // need to get compute stream from compute service
-        ? computeSvc.getJobTabularOutput(_computeInfo.get().getFirst(), _computeInfo.get().getSecond())
+        ? computeSvc.getJobTabularOutput(_computeInfo.get().getComputeName(), _computeInfo.get().getRequestBody())
         // all other streams come from subsetting service
         : subsetSvc.getTabularDataStream(metadata, _filters, Optional.empty(), spec);
 
@@ -155,7 +154,7 @@ public class MergeRequestProcessor {
       String targetEntityId,
       List<VariableSpec> outputVars,
       ReferenceMetadata metadata,
-      Optional<TwoTuple<String,ComputeRequestBody>> computeInfo) throws ValidationException {
+      Optional<ComputeInfo> computeInfo) throws ValidationException {
     StreamSpec requestSpec = new StreamSpec("incoming", targetEntityId);
     requestSpec.addAll(outputVars);
     new EdaMergingSpecValidator()
@@ -163,15 +162,15 @@ public class MergeRequestProcessor {
       .throwIfInvalid();
 
     // no need to check compute if it doesn't exist
-    if (computeInfo.isEmpty()) return;
-
-    // compute present; make sure computed var entity is the same as, or an ancestor of, the target entity (needed for now)
-    Predicate<String> isComputeVarEntity = entityId -> entityId.equals(computeInfo.get().getSecond().getConfig().getOutputEntityId());
-    if (!isComputeVarEntity.test(targetEntityId) && metadata
-        .getAncestors(metadata.getEntity(targetEntityId).orElseThrow()).stream()
-        .filter(entity -> isComputeVarEntity.test(entity.getId()))
-        .findFirst().isEmpty()) {
-      throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
+    if (computeInfo.isPresent()) {
+      // compute present; make sure computed var entity is the same as, or an ancestor of, the target entity (needed for now)
+      Predicate<String> isComputeVarEntity = entityId -> entityId.equals(computeInfo.get().getComputeEntity());
+      if (!isComputeVarEntity.test(targetEntityId) && metadata
+          .getAncestors(metadata.getEntity(targetEntityId).orElseThrow()).stream()
+          .filter(entity -> isComputeVarEntity.test(entity.getId()))
+          .findFirst().isEmpty()) {
+        throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
+      }
     }
   }
 
