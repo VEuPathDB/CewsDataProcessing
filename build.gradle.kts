@@ -4,7 +4,7 @@ import java.net.URL
 
 plugins {
   java
-  id("org.veupathdb.lib.gradle.container.container-utils") version "4.8.0"
+  id("org.veupathdb.lib.gradle.container.container-utils") version "4.8.2"
   id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -114,9 +114,12 @@ tasks.named("merge-raml") {
   }
 }
 
-// ensures changing modules are never cached
+// ensures changing and dynamic modules are never cached
 configurations.all {
-  resolutionStrategy.cacheChangingModulesFor(0, TimeUnit.SECONDS)
+  resolutionStrategy {
+    cacheChangingModulesFor(0, TimeUnit.SECONDS)
+    cacheDynamicVersionsFor(0, TimeUnit.SECONDS)
+  }
 }
 
 dependencies {
