@@ -215,8 +215,6 @@ public class MergeRequestProcessor {
         writer.write(String.join(TAB, row.values()));
         writer.newLine();
       }
-      LOG.info("Time spent transforming: " + targetEntityStream.getTransformTime());
-      LOG.info("Time spent parsing: " + targetEntityStream.getParseTime());
 
       // flush any remaining chars
       writer.flush();
