@@ -1,10 +1,7 @@
 package org.veupathdb.service.eda.ms.core;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -15,6 +12,7 @@ import jakarta.ws.rs.BadRequestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
+import org.gusdb.fgputil.Timer;
 import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.iterator.IteratorUtil;
@@ -174,18 +172,35 @@ public class MergeRequestProcessor {
     }
   }
 
+
   private static void writeMergedStream(ReferenceMetadata metadata, EntityDef targetEntity,
       Optional<EntityDef> computedEntity, List<VariableSpec> outputVars, Map<String, StreamSpec> requiredStreams,
       Map<String, InputStream> dataStreams, OutputStream out) {
 
     LOG.info("All requested streams (" + requiredStreams.size() + ") ready for consumption");
 
-    EntityStream targetEntityStream =
-        requiredStreams.size() == 1 && metadata.getDerivedVariableSpecs().isEmpty() ?
-        // speed optimized by directly copying a single stream's result into the output
-        new EntityStream(requiredStreams.values().iterator().next(), dataStreams.values().iterator().next(), metadata) :
-        // more than one stream requires merge logic
-        new TargetEntityStream(targetEntity, computedEntity, outputVars, metadata, requiredStreams, dataStreams);
+    if (requiredStreams.size() == 1
+        && metadata.getDerivedVariableSpecs().isEmpty()
+        && computedEntity.isEmpty()) {
+      try (BufferedInputStream is = new BufferedInputStream(dataStreams.values().iterator().next());
+           BufferedOutputStream os = new BufferedOutputStream(out)) {
+        do {
+          // Skip over header line to re-write with dot notation.
+        } while (is.read() != '\n');
+        String headerRow = String.join(TAB, VariableDef.toDotNotation(outputVars));
+        os.write(headerRow.getBytes(StandardCharsets.UTF_8));
+        os.write('\n');
+
+        LOG.info("Transferring subsetting stream to output since there is only one stream.");
+        is.transferTo(os);
+        return;
+      }
+      catch (IOException e) {
+        throw new RuntimeException("Unable to write output stream", e);
+      }
+    }
+
+    EntityStream targetEntityStream = new TargetEntityStream(targetEntity, computedEntity, outputVars, metadata, requiredStreams, dataStreams);
 
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
 
