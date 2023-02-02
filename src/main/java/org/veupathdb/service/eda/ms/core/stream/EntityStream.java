@@ -1,14 +1,17 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Scanner;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -29,7 +32,7 @@ import static org.gusdb.fgputil.FormatUtil.TAB;
  * into a map for each row and caching the last row read for inspection
  * before delivery.
  */
-public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
+public class EntityStream implements Iterator<Map<String,String>> {
 
   private static final Logger LOG = LogManager.getLogger(EntityStream.class);
 
@@ -39,10 +42,11 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
   protected final EntityDef _entity;
   private final List<VariableDef> _expectedNativeColumns;
   private final DelimitedDataParser _parser;
-  private final Scanner _scanner;
+  private final BufferedReader _reader;
+  private final List<String> _nativeHeaders;
 
   // caches the last row read from the scanner (null if no more rows)
-  private LinkedHashMap<String, String> _lastRowRead;
+  private Map<String, String> _lastRowRead;
 
   public EntityStream(StreamSpec spec, InputStream inStream, ReferenceMetadata metadata) {
     LOG.info("Instantiated " + getClass().getSimpleName() + " for entity " + spec.getEntityId());
@@ -50,29 +54,39 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
     _derivedVariableFactory = new DerivedVariableFactory(metadata);
     _entity = _metadata.getEntity(spec.getEntityId()).orElseThrow();
     _expectedNativeColumns = _metadata.getTabularColumns(_entity, spec);
-    _parser = new DelimitedDataParser(VariableDef.toDotNotation(_expectedNativeColumns), TAB, true);
-    _scanner = beginValidatedInput(inStream);
+    _nativeHeaders = VariableDef.toDotNotation(_expectedNativeColumns);
+    _parser = new DelimitedDataParser(_nativeHeaders, TAB, true);
+    _reader = beginValidatedInput(inStream);
     _lastRowRead = readRow();
   }
 
-  private Scanner beginValidatedInput(InputStream inStream) {
-    Scanner scanner = new Scanner(inStream);
-    if (!scanner.hasNext()) {
-      throw new RuntimeException("Subsetting service tabular endpoint did not return header row");
-    }
-
-    // capture the header and validate response
-    Map<String,String> header = _parser.parseLine(scanner.nextLine()); // validates counts
-    List<String> received = new ArrayList<>(header.values());
-    for (int i = 0; i < received.size(); i++) {
-      if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) {
-        throw new RuntimeException("Tabular subsetting result of type '" +
-            _entity.getId() + "' contained unexpected header." + NL + "Expected:" +
-            _expectedNativeColumns.stream().map(v -> v.getVariableId()).collect(Collectors.joining(",")) +
-            NL + "Found   : " + String.join(",", received));
+  private BufferedReader beginValidatedInput(InputStream inStream) {
+    final InputStreamReader inputStreamReader = new InputStreamReader(inStream);
+    final BufferedReader reader = new BufferedReader(inputStreamReader);
+    try {
+      final String headerLine = reader.readLine();
+      // capture the header and validate response
+      if (headerLine == null) {
+        throw new RuntimeException("Subsetting service tabular endpoint did not return header row");
       }
+      Map<String,String> header = _parser.parseLine(headerLine); // validates counts
+      List<String> received = new ArrayList<>(header.values());
+      for (int i = 0; i < received.size(); i++) {
+        if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) {
+          throw new RuntimeException("Tabular subsetting result of type '" +
+              _entity.getId() + "' contained unexpected header." + NL + "Expected:" +
+              _expectedNativeColumns.stream().map(v -> v.getVariableId()).collect(Collectors.joining(",")) +
+              NL + "Found   : " + String.join(",", received));
+        }
+      }
+      return reader;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-    return scanner;
+  }
+
+  public Set<String> getNativeHeaders() {
+    return new HashSet<>(_nativeHeaders);
   }
 
   public EntityDef getEntity() {
@@ -80,10 +94,15 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
   }
 
   // returns null if no more rows
-  private LinkedHashMap<String, String> readRow() {
-    return _scanner.hasNextLine()
-        ? applyTransforms(_parser.parseLine(_scanner.nextLine()))
-        : null;
+  private Map<String, String> readRow() {
+    try {
+      final String nextLine = _reader.readLine();
+      return nextLine != null
+          ? applyTransforms(_parser.parseLine(nextLine))
+          : null;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -92,22 +111,22 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
   }
 
   @Override
-  public LinkedHashMap<String, String> next() {
+  public Map<String, String> next() {
     if (!hasNext()) {
       throw new NoSuchElementException("No rows remain.");
     }
-    LinkedHashMap<String, String> lastRow = _lastRowRead;
+    Map<String, String> lastRow = _lastRowRead;
     _lastRowRead = readRow();
     return lastRow;
   }
 
-  public Optional<LinkedHashMap<String, String>> getPreviousRowIf(Predicate<Map<String, String>> condition) {
+  public Optional<Map<String, String>> getPreviousRowIf(Predicate<Map<String, String>> condition) {
     return hasNext() && condition.test(_lastRowRead)
       ? Optional.of(_lastRowRead)
       : Optional.empty();
   }
 
-  public Optional<LinkedHashMap<String, String>> getNextRowIf(Predicate<Map<String, String>> condition) {
+  public Optional<Map<String, String>> getNextRowIf(Predicate<Map<String, String>> condition) {
     return hasNext() && condition.test(_lastRowRead)
       ? Optional.of(next())
       : Optional.empty();
@@ -119,7 +138,7 @@ public class EntityStream implements Iterator<LinkedHashMap<String,String>> {
    *  2. can be applied given the available vars
    * Loops through until no more can be applied (handles nested transform case)
    */
-  protected LinkedHashMap<String,String> applyTransforms(LinkedHashMap<String,String> row) {
+  protected Map<String,String> applyTransforms(Map<String,String> row) {
     List<Transform> transforms = _derivedVariableFactory.getTransforms(_entity);
     int numApplied;
     do {
