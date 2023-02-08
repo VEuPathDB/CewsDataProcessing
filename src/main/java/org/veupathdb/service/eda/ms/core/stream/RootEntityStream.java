@@ -1,15 +1,11 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
 
-import org.gusdb.fgputil.collection.FixedSizeStringMap;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -26,9 +22,6 @@ public class RootEntityStream extends EntityStream {
   private final Map<String, EntityStream> _descendantStreams;
 
   private final Optional<EntityStream> _computeStream;
-
-  private final Set<String> _allHeaders;
-  private final FixedSizeStringMap _row;
 
   public RootEntityStream(EntityDef entityOfStream, Optional<EntityDef> computeEntity, ReferenceMetadata metadata,
       Map<String, StreamSpec> streamSpecs, Map<String, InputStream> dataStreams,
@@ -53,11 +46,6 @@ public class RootEntityStream extends EntityStream {
             dataStreams.get(COMPUTED_VAR_STREAM_NAME),
             metadata));
 
-    _allHeaders = new HashSet<>(super.getNativeHeaders());
-    _allHeaders.addAll(_descendantStreams.values().stream()
-        .flatMap(descStream -> descStream.getNativeHeaders().stream()).toList());
-    _computeStream.ifPresent(stream -> _allHeaders.addAll(stream.getNativeHeaders()));
-    _row = new FixedSizeStringMap.Builder(_allHeaders.toArray(new String[_allHeaders.size()])).build();
   }
 
   protected String getEntityIdColName() {
@@ -65,17 +53,11 @@ public class RootEntityStream extends EntityStream {
   }
 
   @Override
-  public Set<String> getNativeHeaders() {
-    return new HashSet<>(_allHeaders);
-  }
-
-  @Override
   public Map<String, String> next() {
-    Map<String,String> nativeVars = super.next();
-    _row.putAll(nativeVars);
+    Map<String,String> row = super.next();
 
     // add descendant info reduced by derived vars
-    Predicate<Map<String,String>> isMatch = r -> r.get(_entityIdColName).equals(nativeVars.get(_entityIdColName));
+    Predicate<Map<String,String>> isMatch = r -> r.get(_entityIdColName).equals(row.get(_entityIdColName));
 
     // pull reduction derived vars from each descendant stream
     for (EntityStream descendentStream : _descendantStreams.values()) {
@@ -97,7 +79,7 @@ public class RootEntityStream extends EntityStream {
       }
       // no more rows in this descendant stream match this one; build the derived vars
       for (Reduction reduction : reductions) {
-        _row.put(reduction.getOutputColumnName(), reduction.getResultingValue());
+        row.put(reduction.getOutputColumnName(), reduction.getResultingValue());
       }
     }
 
@@ -109,15 +91,15 @@ public class RootEntityStream extends EntityStream {
       // read the row
       Map<String,String> nextComputedRow = stream.next();
       // make sure ID matches
-      if (!_row.get(_entityIdColName).equals(nextComputedRow.get(_entityIdColName))) {
+      if (!row.get(_entityIdColName).equals(nextComputedRow.get(_entityIdColName))) {
         throw new IllegalStateException("Computed row entity ID '" + nextComputedRow.get(_entityIdColName) +
-            " does not match expected ID " + _row.get(_entityIdColName));
+            " does not match expected ID " + row.get(_entityIdColName));
       }
       // add values to row
-      _row.putAll(nextComputedRow);
+      row.putAll(nextComputedRow);
     });
 
     // apply transforms again in case they rely on reduction vars
-    return applyTransforms(_row);
+    return applyTransforms(row);
   }
 }

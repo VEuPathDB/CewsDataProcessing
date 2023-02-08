@@ -5,13 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -83,10 +81,6 @@ public class EntityStream implements Iterator<Map<String,String>> {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  public Set<String> getNativeHeaders() {
-    return new HashSet<>(_nativeHeaders);
   }
 
   public EntityDef getEntity() {

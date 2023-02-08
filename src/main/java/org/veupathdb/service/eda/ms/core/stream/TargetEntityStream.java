@@ -13,7 +13,7 @@ import java.util.function.Predicate;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.collection.FixedSizeStringMap;
+import org.gusdb.fgputil.collection.InitialSizeStringMap;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -25,8 +25,7 @@ public class TargetEntityStream extends RootEntityStream {
 
   private final String[] _outputVars;
   private final Map<String, RootEntityStream> _ancestorStreams;
-  private final FixedSizeStringMap _outputRow;
-  private final FixedSizeStringMap _row;
+  private final InitialSizeStringMap _outputRow;
 
   public TargetEntityStream(EntityDef targetEntity, Optional<EntityDef> computedEntity,
                             List<VariableSpec> outputVars, ReferenceMetadata metadata,
@@ -36,11 +35,10 @@ public class TargetEntityStream extends RootEntityStream {
 
     // header names for values we will return
     _outputVars = VariableDef.toDotNotation(outputVars).toArray(new String[outputVars.size()]);
-    _outputRow = new FixedSizeStringMap.Builder(_outputVars).build();
+    _outputRow = new InitialSizeStringMap.Builder(_outputVars).build();
 
     // build ancestor streams for any required ancestors
     _ancestorStreams = new LinkedHashMap<>();
-    Set<String> allHeaders = new HashSet<>(getNativeHeaders());
     List<EntityDef> ancestors = metadata.getAncestors(targetEntity);
     for (int i = 0; i < ancestors.size(); i++) {
       EntityDef entity = ancestors.get(i);
@@ -48,11 +46,8 @@ public class TargetEntityStream extends RootEntityStream {
         List<String> descendantsToExclude = getSubtreeEntityIds(i == 0 ? targetEntity : ancestors.get(i - 1));
         RootEntityStream stream = new RootEntityStream(entity, computedEntity, metadata, streamSpecs, dataStreams, descendantsToExclude);
         _ancestorStreams.put(entity.getId(), stream);
-        allHeaders.addAll(stream.getNativeHeaders());
       }
     }
-    LOG.info("Headers: " + allHeaders);
-    _row = new FixedSizeStringMap.Builder(allHeaders.toArray(new String[allHeaders.size()])).build();
   }
 
   private List<String> getSubtreeEntityIds(EntityDef rootEntity) {
@@ -68,12 +63,12 @@ public class TargetEntityStream extends RootEntityStream {
   @Override
   public Map<String, String> next() {
     // RootEntityStream.next() will give us our own native vars plus any pulled from descendants
-    _row.putAll(super.next());
+    Map<String, String> row = super.next();
 
     // supplement with vars from ancestors
     for (RootEntityStream ancestorStream : _ancestorStreams.values()) {
       String ancestorIdColName = ancestorStream.getEntityIdColName();
-      Predicate<Map<String,String>> isMatch = r -> r.get(ancestorIdColName).equals(_row.get(ancestorIdColName));
+      Predicate<Map<String,String>> isMatch = r -> r.get(ancestorIdColName).equals(row.get(ancestorIdColName));
       Optional<Map<String,String>> ancestorRow = ancestorStream.getPreviousRowIf(isMatch);
       while (ancestorStream.hasNext() && ancestorRow.isEmpty()) {
         // this row is a member of a new ancestor of this entity; move to the next row
@@ -84,14 +79,14 @@ public class TargetEntityStream extends RootEntityStream {
         // Still empty and ancestor stream is exhausted.  We expect every target entity row to
         // have a matching row in each ancestor entity's stream.  Not having one is a fatal error.
         throw new RuntimeException("Ancestor stream '" + ancestorStream.getEntity().getId() +
-            "' could not provide a row matching '" + ancestorIdColName + "' with value '" + _row.get(ancestorIdColName) + "'.");
+            "' could not provide a row matching '" + ancestorIdColName + "' with value '" + row.get(ancestorIdColName) + "'.");
       }
-      _row.putAll(ancestorRow.get());
+      row.putAll(ancestorRow.get());
     }
 
     // return only requested vars and in the correct order
     for (String col : _outputVars) {
-      _outputRow.put(col, _row.get(col));
+      _outputRow.put(col, row.get(col));
     }
     return _outputRow;
   }
