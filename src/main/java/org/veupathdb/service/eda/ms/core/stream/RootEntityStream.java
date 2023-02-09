@@ -1,17 +1,16 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
 import java.io.InputStream;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
+
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.common.derivedvars.plugin.Reduction;
-import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 import static org.veupathdb.service.eda.ms.core.MergeRequestProcessor.COMPUTED_VAR_STREAM_NAME;
@@ -46,6 +45,7 @@ public class RootEntityStream extends EntityStream {
             streamSpecs.get(COMPUTED_VAR_STREAM_NAME),
             dataStreams.get(COMPUTED_VAR_STREAM_NAME),
             metadata));
+
   }
 
   protected String getEntityIdColName() {
@@ -53,11 +53,11 @@ public class RootEntityStream extends EntityStream {
   }
 
   @Override
-  public LinkedHashMap<String, String> next() {
-    LinkedHashMap<String,String> nativeVars = super.next();
+  public Map<String, String> next() {
+    Map<String,String> row = super.next();
 
     // add descendant info reduced by derived vars
-    Predicate<Map<String,String>> isMatch = r -> r.get(_entityIdColName).equals(nativeVars.get(_entityIdColName));
+    Predicate<Map<String,String>> isMatch = r -> r.get(_entityIdColName).equals(row.get(_entityIdColName));
 
     // pull reduction derived vars from each descendant stream
     for (EntityStream descendentStream : _descendantStreams.values()) {
@@ -66,7 +66,7 @@ public class RootEntityStream extends EntityStream {
       List<Reduction> reductions = _derivedVariableFactory.getReductions(descendentStream.getEntity(), getEntity());
 
       // read rows until no longer matching this entity's ID column
-      Optional<LinkedHashMap<String,String>> descendantRow = descendentStream.getNextRowIf(isMatch);
+      Optional<Map<String,String>> descendantRow = descendentStream.getNextRowIf(isMatch);
       while (descendantRow.isPresent()) {
 
         // for each derived var relationship, pass row to builder for that var
@@ -77,10 +77,9 @@ public class RootEntityStream extends EntityStream {
         // get next row (if matching)
         descendantRow = descendentStream.getNextRowIf(isMatch);
       }
-
       // no more rows in this descendant stream match this one; build the derived vars
       for (Reduction reduction : reductions) {
-        nativeVars.put(reduction.getOutputColumnName(), reduction.getResultingValue());
+        row.put(reduction.getOutputColumnName(), reduction.getResultingValue());
       }
     }
 
@@ -92,15 +91,15 @@ public class RootEntityStream extends EntityStream {
       // read the row
       Map<String,String> nextComputedRow = stream.next();
       // make sure ID matches
-      if (!nativeVars.get(_entityIdColName).equals(nextComputedRow.get(_entityIdColName))) {
+      if (!row.get(_entityIdColName).equals(nextComputedRow.get(_entityIdColName))) {
         throw new IllegalStateException("Computed row entity ID '" + nextComputedRow.get(_entityIdColName) +
-            " does not match expected ID " + nativeVars.get(_entityIdColName));
+            " does not match expected ID " + row.get(_entityIdColName));
       }
       // add values to row
-      nativeVars.putAll(nextComputedRow);
+      row.putAll(nextComputedRow);
     });
 
     // apply transforms again in case they rely on reduction vars
-    return applyTransforms(nativeVars);
+    return applyTransforms(row);
   }
 }

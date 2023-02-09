@@ -3,11 +3,17 @@ package org.veupathdb.service.eda.ms.core.stream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.gusdb.fgputil.collection.InitialSizeStringMap;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -15,9 +21,11 @@ import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.VariableSpec;
 
 public class TargetEntityStream extends RootEntityStream {
+  private static final Logger LOG = LogManager.getLogger(TargetEntityStream.class);
 
-  private final List<String> _outputVars;
+  private final String[] _outputVars;
   private final Map<String, RootEntityStream> _ancestorStreams;
+  private final InitialSizeStringMap _outputRow;
 
   public TargetEntityStream(EntityDef targetEntity, Optional<EntityDef> computedEntity,
                             List<VariableSpec> outputVars, ReferenceMetadata metadata,
@@ -26,7 +34,8 @@ public class TargetEntityStream extends RootEntityStream {
     super(targetEntity, computedEntity, metadata, streamSpecs, dataStreams, Collections.emptyList());
 
     // header names for values we will return
-    _outputVars = VariableDef.toDotNotation(outputVars);
+    _outputVars = VariableDef.toDotNotation(outputVars).toArray(new String[outputVars.size()]);
+    _outputRow = new InitialSizeStringMap.Builder(_outputVars).build();
 
     // build ancestor streams for any required ancestors
     _ancestorStreams = new LinkedHashMap<>();
@@ -35,9 +44,8 @@ public class TargetEntityStream extends RootEntityStream {
       EntityDef entity = ancestors.get(i);
       if (dataStreams.containsKey(entity.getId())) {
         List<String> descendantsToExclude = getSubtreeEntityIds(i == 0 ? targetEntity : ancestors.get(i - 1));
-        _ancestorStreams.put(entity.getId(),
-            new RootEntityStream(entity, computedEntity, metadata, streamSpecs, dataStreams, descendantsToExclude));
-
+        RootEntityStream stream = new RootEntityStream(entity, computedEntity, metadata, streamSpecs, dataStreams, descendantsToExclude);
+        _ancestorStreams.put(entity.getId(), stream);
       }
     }
   }
@@ -53,15 +61,15 @@ public class TargetEntityStream extends RootEntityStream {
   }
 
   @Override
-  public LinkedHashMap<String, String> next() {
+  public Map<String, String> next() {
     // RootEntityStream.next() will give us our own native vars plus any pulled from descendants
-    LinkedHashMap<String,String> row = super.next();
+    Map<String, String> row = super.next();
 
     // supplement with vars from ancestors
     for (RootEntityStream ancestorStream : _ancestorStreams.values()) {
       String ancestorIdColName = ancestorStream.getEntityIdColName();
       Predicate<Map<String,String>> isMatch = r -> r.get(ancestorIdColName).equals(row.get(ancestorIdColName));
-      Optional<LinkedHashMap<String,String>> ancestorRow = ancestorStream.getPreviousRowIf(isMatch);
+      Optional<Map<String,String>> ancestorRow = ancestorStream.getPreviousRowIf(isMatch);
       while (ancestorStream.hasNext() && ancestorRow.isEmpty()) {
         // this row is a member of a new ancestor of this entity; move to the next row
         ancestorStream.next(); // throws away the previous ancestor row
@@ -76,11 +84,11 @@ public class TargetEntityStream extends RootEntityStream {
       row.putAll(ancestorRow.get());
     }
 
+    _outputRow.clear();
     // return only requested vars and in the correct order
-    LinkedHashMap<String,String> outputRow = new LinkedHashMap<>();
     for (String col : _outputVars) {
-      outputRow.put(col, row.get(col));
+      _outputRow.put(col, row.get(col));
     }
-    return outputRow;
+    return _outputRow;
   }
 }
