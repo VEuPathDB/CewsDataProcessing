@@ -84,6 +84,7 @@ public class TargetEntityStream extends RootEntityStream {
       row.putAll(ancestorRow.get());
     }
 
+    _outputRow.clear();
     // return only requested vars and in the correct order
     for (String col : _outputVars) {
       _outputRow.put(col, row.get(col));
