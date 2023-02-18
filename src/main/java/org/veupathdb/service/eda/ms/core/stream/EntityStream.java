@@ -1,26 +1,22 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.DelimitedDataParser;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
+import org.veupathdb.service.eda.common.derivedvars.plugin.Transform;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.common.derivedvars.DerivedVariableFactory;
-import org.veupathdb.service.eda.common.derivedvars.plugin.Transform;
+import org.veupathdb.service.eda.generated.model.VariableSpecImpl;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 import static org.gusdb.fgputil.FormatUtil.TAB;
@@ -36,7 +32,6 @@ public class EntityStream implements Iterator<Map<String,String>> {
 
   // final fields used to set up the stream
   protected final ReferenceMetadata _metadata;
-  protected final DerivedVariableFactory _derivedVariableFactory;
   protected final EntityDef _entity;
   private final List<VariableDef> _expectedNativeColumns;
   private final DelimitedDataParser _parser;
@@ -49,7 +44,6 @@ public class EntityStream implements Iterator<Map<String,String>> {
   public EntityStream(StreamSpec spec, InputStream inStream, ReferenceMetadata metadata) {
     LOG.info("Instantiated " + getClass().getSimpleName() + " for entity " + spec.getEntityId());
     _metadata = metadata;
-    _derivedVariableFactory = new DerivedVariableFactory(metadata);
     _entity = _metadata.getEntity(spec.getEntityId()).orElseThrow();
     _expectedNativeColumns = _metadata.getTabularColumns(_entity, spec);
     _nativeHeaders = VariableDef.toDotNotation(_expectedNativeColumns);
@@ -73,7 +67,7 @@ public class EntityStream implements Iterator<Map<String,String>> {
         if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) {
           throw new RuntimeException("Tabular subsetting result of type '" +
               _entity.getId() + "' contained unexpected header." + NL + "Expected:" +
-              _expectedNativeColumns.stream().map(v -> v.getVariableId()).collect(Collectors.joining(",")) +
+              _expectedNativeColumns.stream().map(VariableSpecImpl::getVariableId).collect(Collectors.joining(",")) +
               NL + "Found   : " + String.join(",", received));
         }
       }
@@ -133,12 +127,12 @@ public class EntityStream implements Iterator<Map<String,String>> {
    * Loops through until no more can be applied (handles nested transform case)
    */
   protected Map<String,String> applyTransforms(Map<String,String> row) {
-    List<Transform> transforms = _derivedVariableFactory.getTransforms(_entity);
+    List<Transform> transforms = _metadata.getDerivedVariableFactory().getTransforms(_entity);
     int numApplied;
     do {
       numApplied = 0;
       for (Transform transform : transforms) {
-        String outputColumn = transform.getOutputColumnName();
+        String outputColumn = VariableDef.toDotNotation(transform);
         if (!row.containsKey(outputColumn) && transform.allRequiredColsPresent(row)) {
           row.put(outputColumn, transform.getValue(row));
           numApplied++;

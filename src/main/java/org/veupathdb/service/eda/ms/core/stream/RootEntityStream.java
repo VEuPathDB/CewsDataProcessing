@@ -17,6 +17,8 @@ import static org.veupathdb.service.eda.ms.core.MergeRequestProcessor.COMPUTED_V
 
 public class RootEntityStream extends EntityStream {
 
+  public static final String COMPUTED_VAR_STREAM_NAME = "__COMPUTED_VAR_STREAM__";
+
   protected final String _entityIdColName;
 
   private final Map<String, EntityStream> _descendantStreams;
@@ -79,7 +81,7 @@ public class RootEntityStream extends EntityStream {
       }
       // no more rows in this descendant stream match this one; build the derived vars
       for (Reduction reduction : reductions) {
-        row.put(reduction.getOutputColumnName(), reduction.getResultingValue());
+        row.put(reduction.getVariableId(), reduction.getResultingValue());
       }
     }
 

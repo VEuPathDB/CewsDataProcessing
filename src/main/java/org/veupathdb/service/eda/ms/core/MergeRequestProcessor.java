@@ -1,18 +1,9 @@
 package org.veupathdb.service.eda.ms.core;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-
 import jakarta.ws.rs.BadRequestException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.ListBuilder;
-import org.gusdb.fgputil.Timer;
 import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.iterator.IteratorUtil;
@@ -32,18 +23,24 @@ import org.veupathdb.service.eda.ms.Resources;
 import org.veupathdb.service.eda.ms.core.stream.EntityStream;
 import org.veupathdb.service.eda.ms.core.stream.TargetEntityStream;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 import static org.gusdb.fgputil.FormatUtil.TAB;
 
 public class MergeRequestProcessor {
 
   private static final Logger LOG = LogManager.getLogger(MergeRequestProcessor.class);
 
-  public static final String COMPUTED_VAR_STREAM_NAME = "__COMPUTED_VAR_STREAM__";
-
   private final String _studyId;
   private final List<APIFilter> _filters;
   private final String _targetEntityId;
-  private final List<DerivedVariableSpec> _derivedVariables;
+  private final List<DerivedVariableSpec> _derivedVariableSpecs;
   private final List<VariableSpec> _outputVarSpecs;
   private final Optional<ComputeInfo> _computeInfo;
   private final Entry<String, String> _authHeader;
@@ -53,12 +50,12 @@ public class MergeRequestProcessor {
     _studyId = request.getStudyId();
     _filters = request.getFilters();
     _targetEntityId = request.getEntityId();
-    _derivedVariables = request.getDerivedVariables();
+    _derivedVariableSpecs = request.getDerivedVariables();
     _outputVarSpecs = request.getOutputVariables();
     _authHeader = authHeader;
     _computeInfo = Optional.ofNullable(request.getComputeSpec())
         .map(spec -> new ComputeInfo(spec.getComputeName(),
-        new ComputeRequestBody(_studyId, _filters, _derivedVariables, spec.getComputeConfig())));
+        new ComputeRequestBody(_studyId, _filters, _derivedVariableSpecs, spec.getComputeConfig())));
   }
 
   public Consumer<OutputStream> createMergedResponseSupplier() throws ValidationException {
@@ -67,7 +64,7 @@ public class MergeRequestProcessor {
     EdaSubsettingClient subsetSvc = new EdaSubsettingClient(Resources.SUBSETTING_SERVICE_URL, _authHeader);
     EdaComputeClient computeSvc = new EdaComputeClient(Resources.COMPUTE_SERVICE_URL, _authHeader);
 
-    // build metadata for requested study
+    // get raw metadata for requested study
     APIStudyDetail studyDetail = subsetSvc.getStudy(_studyId)
         .orElseThrow(() -> new ValidationException("No study found with ID " + _studyId));
 
@@ -79,10 +76,9 @@ public class MergeRequestProcessor {
         info.setMetadata(computeSvc.getJobVariableMetadata(info.getComputeName(), info.getRequestBody()));
     });
 
-
     // create reference metadata using collected information
     ReferenceMetadata metadata = new ReferenceMetadata(studyDetail,
-        _computeInfo.map(ComputeInfo::getVariables).orElse(Collections.emptyList()), _derivedVariables);
+        _computeInfo.map(ComputeInfo::getVariables).orElse(Collections.emptyList()), _derivedVariableSpecs);
 
     // validation of incoming request
     //  (validation based specifically on the requested entity done during spec creation)
@@ -92,11 +88,14 @@ public class MergeRequestProcessor {
     EntityDef targetEntity = metadata.getEntity(_targetEntityId).orElseThrow();
     List<VariableDef> outputVarDefs = metadata.getTabularColumns(targetEntity, _outputVarSpecs);
     List<VariableSpec> outputVars = new ArrayList<>(outputVarDefs.stream().map(v -> (VariableSpec)v).toList());
-
-    // build specs for streams to be merged into this request's response
     Optional<EntityDef> computedEntity = _computeInfo
         .map(info -> metadata.getEntity(info.getComputeEntity()).orElseThrow());
-    Map<String, StreamSpec> requiredStreams = new SubsettingStreamSpecFactory(metadata, targetEntity, computedEntity, outputVarDefs).createSpecs();
+
+    // build specs for streams to be merged into this request's response
+    TargetEntityStream targetStream = new SubsettingStreamSpecFactory(
+        metadata, targetEntity, computedEntity, outputVarDefs)
+          .buildRecordStreamDependencyTree();
+    Map<String, StreamSpec> requiredStreams = targetStream.getRequiredStreamSpecs();
 
     // if computed vars present, add stream spec for compute and add computed vars to output columns
     addComputedDataSpecs(_computeInfo.map(ComputeInfo::getVariables).orElse(Collections.emptyList()), requiredStreams, outputVars);
@@ -167,11 +166,11 @@ public class MergeRequestProcessor {
           .getAncestors(metadata.getEntity(targetEntityId).orElseThrow()).stream()
           .filter(entity -> isComputeVarEntity.test(entity.getId()))
           .findFirst().isEmpty()) {
+        // we don't perform reductions on computed vars so they must be on the target entity or an ancestor
         throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
       }
     }
   }
-
 
   private static void writeMergedStream(ReferenceMetadata metadata, EntityDef targetEntity,
       Optional<EntityDef> computedEntity, List<VariableSpec> outputVars, Map<String, StreamSpec> requiredStreams,
@@ -180,7 +179,7 @@ public class MergeRequestProcessor {
     LOG.info("All requested streams (" + requiredStreams.size() + ") ready for consumption");
 
     if (requiredStreams.size() == 1
-        && metadata.getDerivedVariableSpecs().isEmpty()
+        && metadata.getDerivedVariableFactory().getAllDerivedVars().isEmpty()
         && computedEntity.isEmpty()) {
       try (BufferedInputStream is = new BufferedInputStream(dataStreams.values().iterator().next());
            BufferedOutputStream os = new BufferedOutputStream(out)) {

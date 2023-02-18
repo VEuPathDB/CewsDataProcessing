@@ -9,9 +9,20 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
+import org.veupathdb.service.eda.ms.core.stream.TargetEntityStream;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 
+/**
+ * Examines the requirements of this request and generates the subsettign service stream
+ * specs needed to fulfill the requests.  This includes all vars needed to generate
+ * requested derived variables.  New streams are requested for any entity that contains
+ * vars on which any derived var depends.  So, for example, if a household derived var
+ * (reduction) depends on an observation var, and a participant derived var (reduction)
+ * depends on an observation var (even if the same one!), separate streams will be
+ * requested.  This is to simplify the merging logic once all streams are ready and since
+ * it is an unlikely scenario, should not greatly degrade performance.
+ */
 public class SubsettingStreamSpecFactory {
 
   private final static Logger LOG = LogManager.getLogger(SubsettingStreamSpecFactory.class);
@@ -28,12 +39,11 @@ public class SubsettingStreamSpecFactory {
     _outputVars = outputVars;
   }
 
-  public Map<String, StreamSpec> createSpecs() throws ValidationException {
+  public TargetEntityStream buildRecordStreamDependencyTree() {
 
-    // gather all needed vars and sort by entity
-    Map<String,List<VariableDef>> sortedVars =
-      findAllNeededVars(_outputVars, new ArrayList<>())
-        .stream().collect(Collectors.groupingBy(VariableDef::getEntityId));
+    // gather requested vars and sort by entity
+    Map<String,List<VariableDef>> requestedVars = _outputVars.stream().collect(Collectors.groupingBy(VariableDef::getEntityId));
+
 
     // even if no vars are required of the target entity, still need a stream for the target
     if (!sortedVars.containsKey(_targetEntity.getId())) {

@@ -1,16 +1,5 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Predicate;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.collection.InitialSizeStringMap;
@@ -20,7 +9,12 @@ import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.VariableSpec;
 
+import java.io.InputStream;
+import java.util.*;
+import java.util.function.Predicate;
+
 public class TargetEntityStream extends RootEntityStream {
+
   private static final Logger LOG = LogManager.getLogger(TargetEntityStream.class);
 
   private final String[] _outputVars;
