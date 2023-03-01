@@ -1,15 +1,15 @@
 package org.veupathdb.service.eda.ms.core;
 
-import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.ms.core.stream.TargetEntityStream;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.functional.Functions.newLinkedHashMapCollector;
 
@@ -42,8 +42,7 @@ public class SubsettingStreamSpecFactory {
   public TargetEntityStream buildRecordStreamDependencyTree() {
 
     // gather requested vars and sort by entity
-    Map<String,List<VariableDef>> requestedVars = _outputVars.stream().collect(Collectors.groupingBy(VariableDef::getEntityId));
-
+    Map<String,List<VariableDef>> sortedVars = _outputVars.stream().collect(Collectors.groupingBy(VariableDef::getEntityId));
 
     // even if no vars are required of the target entity, still need a stream for the target
     if (!sortedVars.containsKey(_targetEntity.getId())) {
@@ -76,6 +75,7 @@ public class SubsettingStreamSpecFactory {
           break;
         case DERIVED:
           findAllNeededVars(_metadata
+              .getDerivedVariableFactory()
               .findDerivedVariable(var)
               .orElseThrow()
               .getRequiredInputVars()

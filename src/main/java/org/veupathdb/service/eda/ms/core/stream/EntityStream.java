@@ -24,7 +24,11 @@ import static org.gusdb.fgputil.FormatUtil.TAB;
 /**
  * Base class for various entity streams, which handles reading tabular data
  * into a map for each row and caching the last row read for inspection
- * before delivery.
+ * before delivery.  It can also perform transforms.  It should be used for
+ * entities that are:
+ *   1. not target entity
+ *   2. have no reductions
+ *   3. have no inherited vars
  */
 public class EntityStream implements Iterator<Map<String,String>> {
 
@@ -132,7 +136,7 @@ public class EntityStream implements Iterator<Map<String,String>> {
     do {
       numApplied = 0;
       for (Transform transform : transforms) {
-        String outputColumn = VariableDef.toDotNotation(transform);
+        String outputColumn = transform.getColumnName();
         if (!row.containsKey(outputColumn) && transform.allRequiredColsPresent(row)) {
           row.put(outputColumn, transform.getValue(row));
           numApplied++;
