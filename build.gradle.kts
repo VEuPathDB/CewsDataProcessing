@@ -4,7 +4,7 @@ import java.net.URL
 
 plugins {
   java
-  id("org.veupathdb.lib.gradle.container.container-utils") version "4.8.2"
+  id("org.veupathdb.lib.gradle.container.container-utils") version "4.8.3"
   id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -79,7 +79,7 @@ repositories {
 
 // versions
 val coreLib       = "6.14.2"        // Container core lib version
-val edaCommon     = "10.3.3"        // EDA Common version
+val edaCommon     = "10.3.4"        // EDA Common version
 val fgputil       = "2.12.3-jakarta" // FgpUtil version
 
 // use local EdaCommon compiled schema if project exists, else use released version;
