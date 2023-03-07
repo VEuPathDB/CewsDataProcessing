@@ -10,10 +10,7 @@ import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.VariableSpecImpl;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -145,5 +142,9 @@ public class EntityStream implements Iterator<Map<String,String>> {
     }
     while (numApplied > 0);
     return row;
+  }
+
+  public Map<String, StreamSpec> getRequiredStreamSpecs() {
+    OutputStream o;
   }
 }

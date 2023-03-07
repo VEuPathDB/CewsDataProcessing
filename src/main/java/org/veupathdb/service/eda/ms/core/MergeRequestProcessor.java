@@ -32,6 +32,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static org.gusdb.fgputil.FormatUtil.TAB;
+import static org.veupathdb.service.eda.ms.core.stream.RootEntityStream.COMPUTED_VAR_STREAM_NAME;
 
 public class MergeRequestProcessor {
 
