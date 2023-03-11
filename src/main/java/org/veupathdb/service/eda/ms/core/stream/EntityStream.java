@@ -4,13 +4,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.DelimitedDataParser;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
-import org.veupathdb.service.eda.common.derivedvars.plugin.Transform;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.VariableSpecImpl;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -19,36 +21,66 @@ import static org.gusdb.fgputil.FormatUtil.NL;
 import static org.gusdb.fgputil.FormatUtil.TAB;
 
 /**
- * Base class for various entity streams, which handles reading tabular data
- * into a map for each row and caching the last row read for inspection
- * before delivery.  It can also perform transforms.  It should be used for
- * entities that are:
- *   1. not target entity
- *   2. have no reductions
- *   3. have no inherited vars
+ * Base class for entity streams; handles reading tabular data into a map for
+ * each row and caching the last row read for inspection before delivery.
+ * Serves as a base class for stream processor nodes that abstracts away the
+ * reading of the tabular data (leaving tree-related and derived variable logic
+ * to the superclass).
+ *
+ * The lifecycle of this class is:
+ * 1. construction
+ * 2. assignment of the stream spec (typically by the subclass in its constructor)
+ * 3. assignment of the data stream
+ * 4. reading tabular rows from stream and outputting data Maps as requested
  */
 public class EntityStream implements Iterator<Map<String,String>> {
 
   private static final Logger LOG = LogManager.getLogger(EntityStream.class);
 
-  // final fields used to set up the stream
+  // final fields
   protected final ReferenceMetadata _metadata;
-  protected final EntityDef _entity;
-  private final List<VariableDef> _expectedNativeColumns;
-  private final DelimitedDataParser _parser;
-  private final BufferedReader _reader;
-  private final List<String> _nativeHeaders;
 
+  // fields set up by assignment of stream spec
+  private StreamSpec _streamSpec;
+  private String _entityIdColumnName;
+  private List<VariableDef> _expectedNativeColumns;
+  private DelimitedDataParser _parser;
+
+  // fields set up by the assignment of the data stream
   // caches the last row read from the scanner (null if no more rows)
+  private BufferedReader _reader;
   private Map<String, String> _lastRowRead;
 
-  public EntityStream(StreamSpec spec, InputStream inStream, ReferenceMetadata metadata) {
-    LOG.info("Instantiated " + getClass().getSimpleName() + " for entity " + spec.getEntityId());
+  protected EntityStream(ReferenceMetadata metadata) {
     _metadata = metadata;
-    _entity = _metadata.getEntity(spec.getEntityId()).orElseThrow();
-    _expectedNativeColumns = _metadata.getTabularColumns(_entity, spec);
-    _nativeHeaders = VariableDef.toDotNotation(_expectedNativeColumns);
-    _parser = new DelimitedDataParser(_nativeHeaders, TAB, true);
+  }
+
+  protected EntityStream setStreamSpec(StreamSpec streamSpec) {
+    LOG.info("Initializing " + getClass().getSimpleName() + " for entity " + streamSpec.getEntityId());
+    _streamSpec = streamSpec;
+    EntityDef entity = _metadata.getEntity(streamSpec.getEntityId()).orElseThrow();
+    // cache the name of the column used to identify records that match the current row
+    _entityIdColumnName = VariableDef.toDotNotation(entity.getIdColumnDef());
+    _expectedNativeColumns = _metadata.getTabularColumns(entity, streamSpec);
+    List<String> nativeHeaders = VariableDef.toDotNotation(_expectedNativeColumns);
+    _parser = new DelimitedDataParser(nativeHeaders, TAB, true);
+    return this;
+  }
+
+  protected StreamSpec getStreamSpec() {
+    return _streamSpec;
+  }
+
+  protected String getEntityIdColumnName() {
+    return _entityIdColumnName;
+  }
+
+  public void acceptDataStreams(Map<String, InputStream> dataStreams) {
+    InputStream inStream = dataStreams.get(_streamSpec.getStreamName());
+    if (inStream == null) // not found!
+      throw new IllegalStateException("Stream with name " + _streamSpec.getStreamName() + " expected but not distributed.");
+    // remove the stream from the map; then enables later checking of whether all streams were distributed
+    dataStreams.remove(_streamSpec.getStreamName());
     _reader = beginValidatedInput(inStream);
     _lastRowRead = readRow();
   }
@@ -65,31 +97,27 @@ public class EntityStream implements Iterator<Map<String,String>> {
       Map<String,String> header = _parser.parseLine(headerLine); // validates counts
       List<String> received = new ArrayList<>(header.values());
       for (int i = 0; i < received.size(); i++) {
-        if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) {
+        if (!received.get(i).equals(_expectedNativeColumns.get(i).getVariableId())) { // validates header names
           throw new RuntimeException("Tabular subsetting result of type '" +
-              _entity.getId() + "' contained unexpected header." + NL + "Expected:" +
+              _streamSpec.getEntityId() + "' contained unexpected header." + NL + "Expected:" +
               _expectedNativeColumns.stream().map(VariableSpecImpl::getVariableId).collect(Collectors.joining(",")) +
               NL + "Found   : " + String.join(",", received));
         }
       }
       return reader;
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  public EntityDef getEntity() {
-    return _entity;
   }
 
   // returns null if no more rows
   private Map<String, String> readRow() {
     try {
       final String nextLine = _reader.readLine();
-      return nextLine != null
-          ? applyTransforms(_parser.parseLine(nextLine))
-          : null;
-    } catch (IOException e) {
+      return nextLine == null ? null : _parser.parseLine(nextLine);
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -121,30 +149,4 @@ public class EntityStream implements Iterator<Map<String,String>> {
       : Optional.empty();
   }
 
-  /**
-   * Applies any transformations that:
-   *  1. are not already applied
-   *  2. can be applied given the available vars
-   * Loops through until no more can be applied (handles nested transform case)
-   */
-  protected Map<String,String> applyTransforms(Map<String,String> row) {
-    List<Transform> transforms = _metadata.getDerivedVariableFactory().getTransforms(_entity);
-    int numApplied;
-    do {
-      numApplied = 0;
-      for (Transform transform : transforms) {
-        String outputColumn = transform.getColumnName();
-        if (!row.containsKey(outputColumn) && transform.allRequiredColsPresent(row)) {
-          row.put(outputColumn, transform.getValue(row));
-          numApplied++;
-        }
-      }
-    }
-    while (numApplied > 0);
-    return row;
-  }
-
-  public Map<String, StreamSpec> getRequiredStreamSpecs() {
-    OutputStream o;
-  }
 }
