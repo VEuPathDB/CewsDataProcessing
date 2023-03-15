@@ -50,3 +50,28 @@ securitySchemes:
         body:
           application/json:
             type: error.ServerError
+
+/merging-query-external:
+  displayName: Data Query
+  post:
+    securedBy: header-auth
+    body:
+      application/json:
+        type: lib.MergedEntityTabularPostRequest
+    responses:
+      200:
+        body:
+          text/tab-separated-values:
+            type: lib.EntityTabularPostResponse
+      400:
+        body:
+          application/json:
+            type: error.BadRequestError
+      422:
+        body:
+          application/json:
+            type: error.UnprocessableEntityError
+      500:
+        body:
+          application/json:
+            type: error.ServerError
