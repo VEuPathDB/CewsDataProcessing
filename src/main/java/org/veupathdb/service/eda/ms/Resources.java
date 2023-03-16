@@ -39,6 +39,7 @@ public class Resources extends ContainerResources {
   protected Object[] resources() {
     return new Object[] {
       Service.class,
+      ServiceExternal.class
     };
   }
 }
