@@ -1,6 +1,5 @@
 package org.veupathdb.service.eda.ms;
 
-import java.util.Map.Entry;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Context;
 import org.apache.logging.log4j.LogManager;
@@ -14,12 +13,13 @@ import org.veupathdb.lib.container.jaxrs.utils.RequestKeys;
 import org.veupathdb.service.eda.common.auth.StudyAccess;
 import org.veupathdb.service.eda.generated.model.EntityTabularPostResponseStream;
 import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
-import org.veupathdb.service.eda.generated.resources.MergingQueryExternal;
 import org.veupathdb.service.eda.generated.resources.Query;
 import org.veupathdb.service.eda.ms.core.MergeRequestProcessor;
 
+import java.util.Map.Entry;
+
 @Authenticated(allowGuests = true)
-public class Service implements Query, MergingQueryExternal {
+public class Service implements Query {
 
   private static final Logger LOG = LogManager.getLogger(Service.class);
 
@@ -34,19 +34,12 @@ public class Service implements Query, MergingQueryExternal {
   @Override
   public PostQueryResponse postQuery(MergedEntityTabularPostRequest requestBody) {
     // no need to check perms; only internal clients can access this endpoint
-    return PostQueryResponse.respond200WithTextTabSeparatedValues(processRequest(requestBody, false));
+    return PostQueryResponse.respond200WithTextTabSeparatedValues(processRequest(_request, requestBody, false));
   }
 
-  @DisableJackson
-  @Override
-  public PostMergingQueryExternalResponse postMergingQueryExternal(MergedEntityTabularPostRequest requestBody) {
-    // check access to full tabular results since this endpoint is intended to be exposed through traefik
-    return PostMergingQueryExternalResponse.respond200WithTextTabSeparatedValues(processRequest(requestBody, true));
-  }
-
-  private EntityTabularPostResponseStream processRequest(MergedEntityTabularPostRequest requestBody, boolean checkPermissions) {
+  static EntityTabularPostResponseStream processRequest(ContainerRequest request, MergedEntityTabularPostRequest requestBody, boolean checkPermissions) {
     try {
-      Entry<String,String> authHeader = UserProvider.getSubmittedAuth(_request)
+      Entry<String,String> authHeader = UserProvider.getSubmittedAuth(request)
           .orElseThrow(() -> new BadRequestException(MISSING_AUTH_MSG));
       if (checkPermissions) {
         StudyAccess.confirmPermission(authHeader, Resources.DATASET_ACCESS_SERVICE_URL,
