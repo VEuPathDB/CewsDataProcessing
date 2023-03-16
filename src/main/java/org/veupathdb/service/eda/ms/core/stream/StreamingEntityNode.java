@@ -65,6 +65,10 @@ public class StreamingEntityNode extends EntityStream {
 
       if (var.getEntityId().equals(targetEntity.getId())) {
         // variable declared on this entity
+        if (var.getSource() == VariableSource.ID) {
+          // no need to specially request IDs; we get them for free
+          continue;
+        }
         if (var.getSource() == VariableSource.NATIVE) {
           // var is native to this entity; add to stream spec
           streamSpec.add(var);
