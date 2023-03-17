@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.FormatUtil.TAB;
 import static org.veupathdb.service.eda.ms.core.stream.RootStreamingEntityNode.COMPUTED_VAR_STREAM_NAME;
@@ -90,8 +91,11 @@ public class MergeRequestProcessor {
     List<VariableDef> outputVarDefs = metadata.getTabularColumns(targetEntity, _outputVarSpecs);
     List<VariableSpec> outputVars = new ArrayList<>(outputVarDefs.stream().map(v -> (VariableSpec)v).toList());
 
-    // build specs for streams to be merged into this request's response
+    // build entity node tree to aggregate the data into a streaming response
     RootStreamingEntityNode targetStream = new RootStreamingEntityNode(targetEntity, outputVarDefs, _filters, metadata, _computeInfo);
+    LOG.info("Created the following entity node tree: " + targetStream);
+
+    // get stream specs for streams needed by the node tree, which will be merged into this request's response
     Map<String, StreamSpec> requiredStreams = Functions.getMapFromValues(targetStream.getRequiredStreamSpecs(), StreamSpec::getStreamName);
 
     // create stream generator
@@ -165,9 +169,11 @@ public class MergeRequestProcessor {
     LOG.info("All requested streams (" + dataStreams.size() + ") ready for consumption");
 
     // distribute the streams to their processors and make sure they all get claimed
-    targetEntityStream.acceptDataStreams(new HashMap<>(dataStreams));
-    if (!dataStreams.isEmpty())
-      throw new IllegalStateException("Not all requested data streams were claimed by the processor tree.");
+    Map<String, InputStream> distributionMap = new HashMap<>(dataStreams); // make a copy which will get cleared out
+    targetEntityStream.acceptDataStreams(distributionMap);
+    if (!distributionMap.isEmpty())
+      throw new IllegalStateException("Not all requested data streams were claimed by the processor tree.  " +
+          "Remaining: " + distributionMap.keySet().stream().collect(Collectors.joining(", ")));
 
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
 

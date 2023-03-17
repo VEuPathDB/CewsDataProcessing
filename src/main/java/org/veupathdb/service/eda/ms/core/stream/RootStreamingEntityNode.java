@@ -1,5 +1,8 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.gusdb.fgputil.FormatUtil;
 import org.gusdb.fgputil.collection.InitialSizeStringMap;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
@@ -11,12 +14,14 @@ import org.veupathdb.service.eda.generated.model.VariableSpec;
 import org.veupathdb.service.eda.ms.core.ComputeInfo;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.gusdb.fgputil.FormatUtil.NL;
 
 public class RootStreamingEntityNode extends StreamingEntityNode {
+
+  private static final Logger LOG = LogManager.getLogger(RootStreamingEntityNode.class);
 
   // special name for the stream of computed tabular data (only ever one compute per merge request)
   public static final String COMPUTED_VAR_STREAM_NAME = "__COMPUTED_VAR_STREAM__";
@@ -70,6 +75,8 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
     List<StreamSpec> streams = super.getRequiredStreamSpecs();
     _computeStreamProcessor.ifPresent(stream ->
         streams.add(stream.getStreamSpec()));
+    LOG.info("Created "+ streams.size() + " stream specs needed to create this response: " + NL +
+        streams.stream().map(StreamSpec::toString).collect(Collectors.joining(NL)));
     return streams;
   }
 
@@ -122,6 +129,16 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
       // treat compute stream like any other ancestor stream
       applyAncestorVars(computeStream, row);
     }
+  }
+
+  @Override
+  public String toString() {
+    return NL + "RootStream {" + NL +
+        "  outputVars: [ " + String.join(", ", _outputVars) + " ]," + NL +
+        "  computeStreamEntityMatchesOurs: " + _computeEntityMatchesOurs + NL +
+        "  computeStream:" + _computeStreamProcessor.map(c -> NL + c.toString(2)).orElse(" <none>") + NL +
+        "  nodeProperties:" + NL + toString(2) + NL +
+        "}" + NL;
   }
 
 }

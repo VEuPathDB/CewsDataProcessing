@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 import static org.gusdb.fgputil.FormatUtil.TAB;
@@ -149,4 +150,28 @@ public class EntityStream implements Iterator<Map<String,String>> {
       : Optional.empty();
   }
 
+  @Override
+  public String toString() {
+    return toString(0);
+  }
+
+  public String toString(int indentSize) {
+    String indent = IntStream.range(0, indentSize).mapToObj(i -> " ").collect(Collectors.joining());
+    return
+        indent + "{" + NL +
+        indent + "  entityIdColumnName: " + _entityIdColumnName + NL +
+        indent + "  expectedNativeColumns: [" + NL +
+        _expectedNativeColumns.stream().map(c -> indent + "    " + c.toString() + NL).collect(Collectors.joining()) +
+        indent + "  streamSpec: " + NL + toString(_streamSpec, indentSize + 2) + NL +
+        indent + "}";
+  }
+
+  private String toString(StreamSpec spec, int indentSize) {
+    String indent = IntStream.range(0, indentSize).mapToObj(i -> " ").collect(Collectors.joining());
+    return indent + "{" + NL +
+        indent + "  name: " + spec.getStreamName() + NL +
+        indent + "  entityId: " + spec.getEntityId() + NL +
+        indent + "  vars: [ " + spec.stream().map(v -> VariableDef.toDotNotation(v)).collect(Collectors.joining()) + " ]" + NL +
+        indent + "}";
+  }
 }

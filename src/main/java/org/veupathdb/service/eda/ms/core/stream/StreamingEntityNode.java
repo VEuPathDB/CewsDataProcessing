@@ -16,6 +16,10 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.gusdb.fgputil.FormatUtil.NL;
 
 public class StreamingEntityNode extends EntityStream {
 
@@ -221,4 +225,35 @@ public class StreamingEntityNode extends EntityStream {
     }
   }
 
+  @Override
+  public String toString() {
+    return toString(0);
+  }
+
+  public String toString(int indentSize) {
+    String indent = IntStream.range(0,indentSize).mapToObj(i -> " ").collect(Collectors.joining());
+    return indent + "{" + NL +
+        indent + "  entityIdColName: " + _entityIdColName + NL +
+        indent + "  entityStreamProps: " + NL +
+        super.toString(indentSize + 2) + NL +
+        indent + "  ancestorStreams: [" + NL +
+        _ancestorStreams.stream().map(s -> s.toString(indentSize + 2) + NL).collect(Collectors.joining()) +
+        indent + "  ]" + NL +
+        indent + "  transforms: [" + NL +
+        _orderedTransforms.stream().map(t -> indent + "  " + toString(t) + NL).collect(Collectors.joining()) +
+        indent + "  ]" + NL +
+        indent + "  reductions: [" + NL +
+        _reductionStreams.stream().map(pair ->
+            indent + "  {" + NL +
+            indent + "    reduction: " + toString(pair.getFirst()) + NL +
+            indent + "    stream:" + NL +
+            indent + pair.getSecond().toString(indentSize + 4) + NL +
+            indent + "  }" + NL).collect(Collectors.joining()) +
+        indent + "  ]" + NL +
+        indent + "}";
+  }
+
+  private String toString(DerivedVariable derivedVar) {
+    return "{ functionName: " + derivedVar.getFunctionName() + ", variable: " + VariableDef.toDotNotation(derivedVar) + " }";
+  }
 }
