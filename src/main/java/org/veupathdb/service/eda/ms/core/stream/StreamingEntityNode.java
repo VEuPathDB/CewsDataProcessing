@@ -2,6 +2,7 @@ package org.veupathdb.service.eda.ms.core.stream;
 
 import org.gusdb.fgputil.Tuples.TwoTuple;
 import org.gusdb.fgputil.functional.Functions;
+import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.derivedvars.plugin.DerivedVariable;
 import org.veupathdb.service.eda.common.derivedvars.plugin.Reduction;
@@ -10,6 +11,7 @@ import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.common.model.VariableSource;
+import org.veupathdb.service.eda.common.plugin.util.PluginUtil;
 import org.veupathdb.service.eda.generated.model.APIFilter;
 
 import java.io.InputStream;
@@ -17,7 +19,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 
@@ -37,7 +38,7 @@ public class StreamingEntityNode extends EntityStream {
       List<APIFilter> subsetFilters,
       ReferenceMetadata metadata,
       int entityDependencyDepth
-  ) {
+  ) throws ValidationException {
     super(metadata);
 
     // check dependency depth
@@ -231,7 +232,7 @@ public class StreamingEntityNode extends EntityStream {
   }
 
   public String toString(int indentSize) {
-    String indent = IntStream.range(0,indentSize).mapToObj(i -> " ").collect(Collectors.joining());
+    String indent = PluginUtil.getIndent(indentSize);
     return indent + "{" + NL +
         indent + "  entityIdColName: " + _entityIdColName + NL +
         indent + "  entityStreamProps: " + NL +
@@ -240,20 +241,16 @@ public class StreamingEntityNode extends EntityStream {
         _ancestorStreams.stream().map(s -> s.toString(indentSize + 2) + NL).collect(Collectors.joining()) +
         indent + "  ]" + NL +
         indent + "  transforms: [" + NL +
-        _orderedTransforms.stream().map(t -> indent + "  " + toString(t) + NL).collect(Collectors.joining()) +
+        _orderedTransforms.stream().map(t -> indent + "  " + t + NL).collect(Collectors.joining()) +
         indent + "  ]" + NL +
         indent + "  reductions: [" + NL +
         _reductionStreams.stream().map(pair ->
             indent + "  {" + NL +
-            indent + "    reduction: " + toString(pair.getFirst()) + NL +
+            indent + "    reduction: " + pair.getFirst() + NL +
             indent + "    stream:" + NL +
             indent + pair.getSecond().toString(indentSize + 4) + NL +
             indent + "  }" + NL).collect(Collectors.joining()) +
         indent + "  ]" + NL +
         indent + "}";
-  }
-
-  private String toString(DerivedVariable derivedVar) {
-    return "{ functionName: " + derivedVar.getFunctionName() + ", variable: " + VariableDef.toDotNotation(derivedVar) + " }";
   }
 }

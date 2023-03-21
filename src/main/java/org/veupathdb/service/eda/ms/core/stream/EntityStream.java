@@ -7,6 +7,7 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
+import org.veupathdb.service.eda.common.plugin.util.PluginUtil;
 import org.veupathdb.service.eda.generated.model.VariableSpecImpl;
 
 import java.io.BufferedReader;
@@ -156,22 +157,14 @@ public class EntityStream implements Iterator<Map<String,String>> {
   }
 
   public String toString(int indentSize) {
-    String indent = IntStream.range(0, indentSize).mapToObj(i -> " ").collect(Collectors.joining());
+    String indent = PluginUtil.getIndent(indentSize);
     return
         indent + "{" + NL +
         indent + "  entityIdColumnName: " + _entityIdColumnName + NL +
         indent + "  expectedNativeColumns: [" + NL +
         _expectedNativeColumns.stream().map(c -> indent + "    " + c.toString() + NL).collect(Collectors.joining()) +
-        indent + "  streamSpec: " + NL + toString(_streamSpec, indentSize + 2) + NL +
+        indent + "  streamSpec: " + NL + _streamSpec.toString(indentSize + 2) + NL +
         indent + "}";
   }
 
-  private String toString(StreamSpec spec, int indentSize) {
-    String indent = IntStream.range(0, indentSize).mapToObj(i -> " ").collect(Collectors.joining());
-    return indent + "{" + NL +
-        indent + "  name: " + spec.getStreamName() + NL +
-        indent + "  entityId: " + spec.getEntityId() + NL +
-        indent + "  vars: [ " + spec.stream().map(v -> VariableDef.toDotNotation(v)).collect(Collectors.joining()) + " ]" + NL +
-        indent + "}";
-  }
 }

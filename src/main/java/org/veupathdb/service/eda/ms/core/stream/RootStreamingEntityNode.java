@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.FormatUtil;
 import org.gusdb.fgputil.collection.InitialSizeStringMap;
+import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -32,7 +33,13 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
   private final Optional<EntityStream> _computeStreamProcessor;
   private final boolean _computeEntityMatchesOurs;
 
-  public RootStreamingEntityNode(EntityDef targetEntity, List<VariableDef> outputVarDefs, List<APIFilter> subsetFilters, ReferenceMetadata metadata, Optional<ComputeInfo> computeInfo) {
+  public RootStreamingEntityNode(
+      EntityDef targetEntity,
+      List<VariableDef> outputVarDefs,
+      List<APIFilter> subsetFilters,
+      ReferenceMetadata metadata,
+      Optional<ComputeInfo> computeInfo) throws ValidationException {
+
     super(targetEntity, outputVarDefs, subsetFilters, metadata, INITIAL_DEPENDENCY_DEPTH);
 
     // create stream spec for compute request and consuming processor

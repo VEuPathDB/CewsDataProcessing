@@ -47,6 +47,7 @@ types:
     type: object
     properties:
       inputVariable: VariableSpec
+      imputeZero?: boolean
   ConcatenationConfig:
     type: object
     properties:
@@ -54,6 +55,35 @@ types:
       delimiter?: string
       suffix?: string
       inputVariables: VariableSpec[]
+  CategoricalRecodingRule:
+    type: object
+    properties:
+      inputValues: string[]
+      outputValue: string
+  CategoricalRecodingConfig:
+    type: object
+    properties:
+      inputVariable: VariableSpec
+      rules: CategoricalRecodingRule[]
+      unmappedValue?: string
+  ContinuousNumericRule:
+    type: object
+    properties:
+      minInclusive?: number
+      maxExclusive?: number
+      outputValue: string
+  ContinuousNumericRecodingConfig:
+    type: object
+    properties:
+      inputVariable: VariableSpec
+      rules: ContinuousNumericRule[]
+      imputeZero?: boolean
+      unmappedValue?: string
+  BodyMassIndexConfig:
+    type: object
+    properties:
+      heightVariable: VariableSpec
+      weightVariable: VariableSpec
   API_Filter:
     type: object
     discriminator: type
