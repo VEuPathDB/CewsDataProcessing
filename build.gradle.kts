@@ -78,9 +78,9 @@ repositories {
 //
 
 // versions
-val coreLib       = "6.14.3"        // Container core lib version
-val edaCommon     = "11.0.0-alpha5"        // EDA Common version
-val fgputil       = "2.12.3-jakarta" // FgpUtil version
+val coreLib       = "6.14.4"         // Container core lib version
+val edaCommon     = "11.0.0-alpha5"         // EDA Common version
+val fgputil       = "2.12.6-jakarta" // FgpUtil version
 
 // use local EdaCommon compiled schema if project exists, else use released version;
 //    this mirrors the way we use local EdaCommon code if available
@@ -134,15 +134,15 @@ dependencies {
   implementation("org.gusdb:fgputil-client:${fgputil}")
 
   // Jersey
-  implementation("org.glassfish.jersey.core:jersey-server:3.1.0")
+  implementation("org.glassfish.jersey.core:jersey-server:3.1.1")
 
   // Jackson
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.14.0")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.14.0")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.14.2")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.14.2")
 
   // Log4J
-  implementation("org.apache.logging.log4j:log4j-api:2.19.0")
-  implementation("org.apache.logging.log4j:log4j-core:2.19.0")
+  implementation("org.apache.logging.log4j:log4j-api:2.20.0")
+  implementation("org.apache.logging.log4j:log4j-core:2.20.0")
 
   // Metrics
   implementation("io.prometheus:simpleclient:0.16.0")
@@ -154,7 +154,7 @@ dependencies {
 
   // Unit Testing
   testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-  testImplementation("org.mockito:mockito-core:4.11.0")
+  testImplementation("org.mockito:mockito-core:5.2.0")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
 }
 
