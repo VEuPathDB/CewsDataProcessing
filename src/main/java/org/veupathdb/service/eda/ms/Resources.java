@@ -38,7 +38,7 @@ public class Resources extends ContainerResources {
   @Override
   protected Object[] resources() {
     return new Object[] {
-      Service.class,
+      ServiceInternal.class,
       ServiceExternal.class
     };
   }

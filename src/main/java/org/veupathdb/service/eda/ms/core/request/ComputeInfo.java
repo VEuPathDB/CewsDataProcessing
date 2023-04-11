@@ -1,4 +1,4 @@
-package org.veupathdb.service.eda.ms.core;
+package org.veupathdb.service.eda.ms.core.request;
 
 import org.veupathdb.service.eda.common.client.EdaComputeClient;
 import org.veupathdb.service.eda.generated.model.ComputedVariableMetadata;

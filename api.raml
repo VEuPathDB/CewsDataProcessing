@@ -23,55 +23,107 @@ securitySchemes:
 
 
 ####################################
-# Endpoints
+# Public Endpoints
 ####################################
 
-/query:
-  displayName: Data Query
-  post:
-    securedBy: header-auth
-    body:
-      application/json:
-        type: lib.MergedEntityTabularPostRequest
-    responses:
-      200:
-        body:
-          text/tab-separated-values:
-            type: lib.EntityTabularPostResponse
-      400:
+/merging:
+  /derived-variables:
+    /input-specs:
+      displayName: This endpoint is used only to produce documentation of derived variable configuration types
+      post:
         body:
           application/json:
-            type: error.BadRequestError
-      422:
-        body:
-          application/json:
-            type: error.UnprocessableEntityError
-      500:
-        body:
-          application/json:
-            type: error.ServerError
+            type: lib.DerivedVariableDocumentationRequest
+        responses:
+          204:
 
-/merging-query-external:
-  displayName: Data Query
-  post:
-    securedBy: header-auth
-    body:
-      application/json:
-        type: lib.MergedEntityTabularPostRequest
-    responses:
-      200:
-        body:
-          text/tab-separated-values:
-            type: lib.EntityTabularPostResponse
-      400:
-        body:
-          application/json:
-            type: error.BadRequestError
-      422:
-        body:
-          application/json:
-            type: error.UnprocessableEntityError
-      500:
-        body:
-          application/json:
-            type: error.ServerError
+    /metadata:
+      /variables:
+        displayName: Return metadata about a small collection of derived variables
+        post:
+          body:
+            application/json:
+              type: lib.DerivedVariableBulkMetadataRequest
+          responses:
+            200:
+              body:
+                application/json:
+                  type: lib.DerivedVariableMetadata[]
+      /units:
+        displayName: Return metadata about available unit conversions
+        get:
+          responses:
+            200:
+              body:
+                application/json:
+                  type: lib.UnitConversionMetadataResponse
+
+  /query:
+    displayName: Merged Tabular Data Query
+    post:
+      securedBy: header-auth
+      body:
+        application/json:
+          type: lib.MergedEntityTabularPostRequest
+      responses:
+        200:
+          body:
+            text/tab-separated-values:
+              type: lib.EntityTabularPostResponse
+        400:
+          body:
+            application/json:
+              type: error.BadRequestError
+        422:
+          body:
+            application/json:
+              type: error.UnprocessableEntityError
+        500:
+          body:
+            application/json:
+              type: error.ServerError
+
+####################################
+# Internal Endpoints
+####################################
+
+/merging-internal:
+
+  /derived-variables:
+    /metadata:
+      /variables:
+        displayName: Return metadata about a small collection of derived variables
+        post:
+          body:
+            application/json:
+              type: lib.DerivedVariableBulkMetadataRequest
+          responses:
+            200:
+              body:
+                application/json:
+                  type: lib.DerivedVariableMetadata[]
+
+  /query:
+    displayName: Merged Tabular Data Query
+    post:
+      securedBy: header-auth
+      body:
+        application/json:
+          type: lib.MergedEntityTabularPostRequest
+      responses:
+        200:
+          body:
+            text/tab-separated-values:
+              type: lib.EntityTabularPostResponse
+        400:
+          body:
+            application/json:
+              type: error.BadRequestError
+        422:
+          body:
+            application/json:
+              type: error.UnprocessableEntityError
+        500:
+          body:
+            application/json:
+              type: error.ServerError

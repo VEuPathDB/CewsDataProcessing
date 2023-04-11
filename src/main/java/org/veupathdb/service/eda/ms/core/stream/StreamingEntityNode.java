@@ -4,9 +4,10 @@ import org.gusdb.fgputil.Tuples.TwoTuple;
 import org.gusdb.fgputil.functional.Functions;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
-import org.veupathdb.service.eda.common.derivedvars.plugin.DerivedVariable;
-import org.veupathdb.service.eda.common.derivedvars.plugin.Reduction;
-import org.veupathdb.service.eda.common.derivedvars.plugin.Transform;
+import org.veupathdb.service.eda.ms.core.derivedvars.DerivedVariableFactory;
+import org.veupathdb.service.eda.ms.core.derivedvars.DerivedVariable;
+import org.veupathdb.service.eda.ms.core.derivedvars.Reduction;
+import org.veupathdb.service.eda.ms.core.derivedvars.Transform;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
@@ -31,15 +32,18 @@ public class StreamingEntityNode extends EntityStream {
   private final List<StreamingEntityNode> _ancestorStreams = new ArrayList<>();
   private final List<TwoTuple<Reduction,StreamingEntityNode>> _reductionStreams = new ArrayList<>();
   private final List<Transform> _orderedTransforms = new ArrayList<>();
+  private final DerivedVariableFactory _derivedVariableFactory;
 
   public StreamingEntityNode(
       EntityDef targetEntity,
       List<VariableDef> outputVarDefs,
       List<APIFilter> subsetFilters,
       ReferenceMetadata metadata,
+      DerivedVariableFactory derivedVariableFactory,
       int entityDependencyDepth
   ) throws ValidationException {
     super(metadata);
+    _derivedVariableFactory = derivedVariableFactory;
 
     // check dependency depth
     if (entityDependencyDepth > MAX_ENTITY_DEPENDENCY_DEPTH) {
@@ -80,19 +84,20 @@ public class StreamingEntityNode extends EntityStream {
         }
         else if (var.getSource() == VariableSource.DERIVED_TRANSFORM) {
           // find transform derived variable instance
-          Transform transform = metadata.getDerivedVariableFactory().getTransform(var).orElseThrow();
+          Transform transform = _derivedVariableFactory.getTransform(var).orElseThrow();
           // any vars the transform needs can be added to those needed by this entity overall
           varsToConsider.addAll(metadata.toVariableDefs(transform.getRequiredInputVars()));
         }
         else if (var.getSource() == VariableSource.DERIVED_REDUCTION) {
           // find reduction derived variable instance
-          Reduction reduction = metadata.getDerivedVariableFactory().getReduction(var).orElseThrow();
+          Reduction reduction = _derivedVariableFactory.getReduction(var).orElseThrow();
           StreamSpec reductionStreamSpec = reduction.getInputStreamSpec();
           _reductionStreams.add(new TwoTuple<>(reduction, new StreamingEntityNode(
               _metadata.getEntity(reductionStreamSpec.getEntityId()).orElseThrow(),
               _metadata.toVariableDefs(reductionStreamSpec),
               reductionStreamSpec.getFiltersOverride().orElse(subsetFilters),
               metadata,
+              _derivedVariableFactory,
               entityDependencyDepth + 1
           )));
         }
@@ -122,13 +127,14 @@ public class StreamingEntityNode extends EntityStream {
             ancestor.getValue(),
             subsetFilters,
             metadata,
+            _derivedVariableFactory,
             entityDependencyDepth + 1
         ));
       }
     }
 
     // create a dependency-ordered list of transforms (most dependent vars last)
-    for (DerivedVariable derivedVar : _metadata.getDerivedVariableFactory().getAllDerivedVars()) {
+    for (DerivedVariable derivedVar : _derivedVariableFactory.getAllDerivedVars()) {
       if (derivedVar instanceof Transform                                           // is a transform
           && derivedVar.getEntity().getId().equals(derivedVar.getEntityId())        // assigned to this entity
           && varsAlreadyHandled.contains(VariableDef.toDotNotation(derivedVar))) {  // that has been directly or indirectly requested
@@ -148,7 +154,7 @@ public class StreamingEntityNode extends EntityStream {
   protected boolean requiresNoDataManipulation() {
     return _ancestorStreams.isEmpty()
         && _reductionStreams.isEmpty()
-        && _metadata.getDerivedVariableFactory().getAllDerivedVars().isEmpty();
+        && _derivedVariableFactory.getAllDerivedVars().isEmpty();
   }
 
   @Override

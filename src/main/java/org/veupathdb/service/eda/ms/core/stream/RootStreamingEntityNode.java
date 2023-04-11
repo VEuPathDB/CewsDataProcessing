@@ -2,7 +2,6 @@ package org.veupathdb.service.eda.ms.core.stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.FormatUtil;
 import org.gusdb.fgputil.collection.InitialSizeStringMap;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
@@ -12,7 +11,8 @@ import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.APIFilter;
 import org.veupathdb.service.eda.generated.model.VariableMapping;
 import org.veupathdb.service.eda.generated.model.VariableSpec;
-import org.veupathdb.service.eda.ms.core.ComputeInfo;
+import org.veupathdb.service.eda.ms.core.request.ComputeInfo;
+import org.veupathdb.service.eda.ms.core.derivedvars.DerivedVariableFactory;
 
 import java.io.InputStream;
 import java.util.*;
@@ -38,9 +38,10 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
       List<VariableDef> outputVarDefs,
       List<APIFilter> subsetFilters,
       ReferenceMetadata metadata,
+      DerivedVariableFactory derivedVariableFactory,
       Optional<ComputeInfo> computeInfo) throws ValidationException {
 
-    super(targetEntity, outputVarDefs, subsetFilters, metadata, INITIAL_DEPENDENCY_DEPTH);
+    super(targetEntity, outputVarDefs, subsetFilters, metadata, derivedVariableFactory, INITIAL_DEPENDENCY_DEPTH);
 
     // create stream spec for compute request and consuming processor
     Optional<StreamSpec> computeStreamSpec = computeInfo.flatMap(info -> getComputeStreamSpec(info.getVariables()));
