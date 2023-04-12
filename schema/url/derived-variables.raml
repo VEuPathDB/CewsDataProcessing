@@ -85,26 +85,29 @@ types:
       name: string
       variable: VariableSpec
 
-  AdvancedSubsetInputVar:
-    type: VariableReference
-    properties:
-      trueValues?: string[]   # defaults to [ '1', 'true', 'yes' ]
-
   SetOperation:
+    type: string
+    enum: [ 'intersect', 'union', 'minus' ]
+
+  Step:
     properties:
-      operation:
-        type: string
-        enum: [ 'intersect', 'union', 'minus' ]
-      # caller must pick one left and one right; needed since union types are unsupported
-      leftOperation?: SetOperation
-      leftVariable?: string
-      rightOperation?: SetOperation
-      rightVariable?: string
+      # how this step will be identified (throwaway, but must be unique in this 'strategy')
+      key: string
+      # defines the operation that will be performed
+      operation: SetOperation
+      # for left branch, caller must choose either another step key or a variable
+      leftStepKey?: string
+      leftVariable?: VariableSpec
+      leftVariableTrueValues?: string[]   # defaults to [ '1', 'true', 'yes' ]
+      # for right branch, caller must choose either another step key or a variable
+      rightStepKey?: string
+      rightVariable?: VariableSpec
+      rightVariableTrueValues?: string[]   # defaults to [ '1', 'true', 'yes' ]
 
   AdvancedSubsetConfig:
     properties:
-      operationTree: SetOperation
-      inputVariables: AdvancedSubsetInputVar[]
+      rootStepKey: string
+      steps: Step[]
 
   EcmaScriptExpressionEvalConfig:
     properties:

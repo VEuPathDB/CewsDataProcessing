@@ -1,21 +1,46 @@
 package org.veupathdb.service.eda.ms.plugins.transforms;
 
 import jakarta.ws.rs.BadRequestException;
+import org.gusdb.fgputil.functional.Functions;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.ms.core.derivedvars.Transform;
 import org.veupathdb.service.eda.ms.plugins.reductions.SubsetMembership;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.generated.model.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 public class AdvancedSubset extends Transform<AdvancedSubsetConfig> {
 
-  public static final List<String> DEFAULT_TRUE_VALUES = List.of("1", "true", "yes");
+  private static final List<String> DEFAULT_TRUE_VALUES = List.of("1", "true", "yes");
+
+  private enum Operation implements BiPredicate<Boolean, Boolean> {
+    INTERSECT ((a, b) -> a && b),
+    UNION     ((a, b) -> a || b),
+    MINUS     ((a, b) -> a && !b);
+
+    private final BiPredicate<Boolean, Boolean> _function;
+
+    Operation(BiPredicate<Boolean, Boolean> function) {
+      _function = function;
+    }
+
+    public static Operation getByOperationType(SetOperation type) {
+      if (type == null) throw new BadRequestException("operation is required");
+      return switch (type) {
+        case INTERSECT -> INTERSECT;
+        case UNION -> UNION;
+        case MINUS -> MINUS;
+      };
+    }
+
+    @Override
+    public boolean test(Boolean a, Boolean b) {
+      return _function.test(a, b);
+    }
+  }
 
   private List<VariableSpec> _requiredVars;
   private OperationNode _operationTree;
@@ -27,9 +52,15 @@ public class AdvancedSubset extends Transform<AdvancedSubsetConfig> {
 
   @Override
   protected void acceptConfig(AdvancedSubsetConfig config) throws ValidationException {
-    List<AdvancedSubsetInputVar> inputVariables = config.getInputVariables();
-    _requiredVars = inputVariables.stream().map(AdvancedSubsetInputVar::getVariable).toList();
-    _operationTree = new OperationNode(config.getOperationTree(), inputVariables);
+    Map<String,Step> stepMap = Functions.getMapFromValues(config.getSteps(), Step::getKey);
+    if (stepMap.size() != config.getSteps().size())
+      throw new ValidationException("Steps must have unique keys within this request.");
+    Map<String, VariableSpec> requiredVarMap = new HashMap<>(); // will be collected during tree creation
+    _operationTree = new OperationNode(config.getRootStepKey(), stepMap, requiredVarMap);
+    if (!stepMap.isEmpty()) {
+      throw new ValidationException("All submitted steps must be used.");
+    }
+    _requiredVars = new ArrayList<>(requiredVarMap.values());
   }
 
   @Override
@@ -64,68 +95,47 @@ public class AdvancedSubset extends Transform<AdvancedSubsetConfig> {
         : SubsetMembership.RETURNED_FALSE_VALUE;
   }
 
-  private enum Operation implements BiPredicate<Boolean, Boolean> {
-    INTERSECT ((a, b) -> a && b),
-    UNION     ((a, b) -> a || b),
-    MINUS     ((a, b) -> a && !b);
-
-    private final BiPredicate<Boolean, Boolean> _function;
-
-    Operation(BiPredicate<Boolean, Boolean> function) {
-      _function = function;
-    }
-
-    public static Operation getByOperationType(SetOperation.OperationType type) {
-      if (type == null) throw new BadRequestException("operation is required");
-      return switch (type) {
-        case INTERSECT -> INTERSECT;
-        case UNION -> UNION;
-        case MINUS -> MINUS;
-      };
-    }
-
-    @Override
-    public boolean test(Boolean a, Boolean b) {
-      return _function.test(a, b);
-    }
-  }
-
   private static class OperationNode implements Predicate<Map<String,String>> {
 
     private final Operation _op;
     private final Predicate<Map<String,String>> _leftChild;
     private final Predicate<Map<String,String>> _rightChild;
 
-    public OperationNode(SetOperation setOp, List<AdvancedSubsetInputVar> inputVariables) {
-      _op = Operation.getByOperationType(setOp.getOperation());
+    public OperationNode(String stepKey, Map<String, Step> stepMap, Map<String, VariableSpec> requiredVarMap) throws ValidationException {
+      Step step = stepMap.remove(stepKey);
+      if (step == null)
+        throw new ValidationException("Step key '" + stepKey + "' does not correspond to any step's key or is referenced more than once.");
+      _op = Operation.getByOperationType(step.getOperation());
       _leftChild = createChild(
           "left",
-          setOp.getLeftVariable(),
-          setOp.getLeftOperation(),
-          inputVariables);
+          step.getLeftStepKey(),
+          step.getLeftVariable(),
+          step.getLeftVariableTrueValues(),
+          stepMap, requiredVarMap);
       _rightChild = createChild(
           "right",
-          setOp.getRightVariable(),
-          setOp.getRightOperation(),
-          inputVariables);
+          step.getRightStepKey(),
+          step.getRightVariable(),
+          step.getRightVariableTrueValues(),
+          stepMap, requiredVarMap);
     }
 
-    private Predicate<Map<String,String>> createChild(String childName, String childVarReference,
-        SetOperation childOperation, List<AdvancedSubsetInputVar> inputVariables) {
-      if ((childVarReference == null && childOperation == null) ||
-          (childVarReference != null && childOperation != null)) {
-        throw new BadRequestException("Each operation must contain exactly one of: a " + childName + " operation or " + childName + " variable reference.");
+    private Predicate<Map<String,String>> createChild(String childSide, String childKey, VariableSpec childVariable,
+        List<String> childTrueValues, Map<String, Step> stepMap, Map<String, VariableSpec> requiredVarMap) throws ValidationException {
+      // ensure exactly one of [ stepKey, variable ] is populated
+      if ((childKey == null && childVariable == null) ||
+          (childKey != null && childVariable != null)) {
+        throw new ValidationException("Each step must contain exactly one of: a " + childSide + " step key or " + childSide + " variable spec.");
       }
-      if (childVarReference != null) {
-        AdvancedSubsetInputVar inputVar = inputVariables.stream()
-            .filter(v -> childVarReference.equals(v.getName())).findAny().orElseThrow(() ->
-                new BadRequestException("Reference in operation tree '" + childVarReference + "' that cannot be found in list of input variables."));
-        String columnName = VariableDef.toDotNotation(inputVar.getVariable());
-        List<String> trueValues = Optional.ofNullable(inputVar.getTrueValues()).orElse(DEFAULT_TRUE_VALUES);
+      if (childVariable != null) {
+        String columnName = VariableDef.toDotNotation(childVariable);
+        // add var as a required var; map ensures no repeats
+        requiredVarMap.put(columnName, childVariable);
+        List<String> trueValues = Optional.ofNullable(childTrueValues).orElse(DEFAULT_TRUE_VALUES);
         return row -> trueValues.contains(row.get(columnName));
       }
       else {
-        return new OperationNode(childOperation, inputVariables);
+        return new OperationNode(childKey, stepMap, requiredVarMap);
       }
     }
 

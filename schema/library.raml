@@ -661,28 +661,28 @@ types:
     properties:
       name: string
       variable: VariableSpec
-  AdvancedSubsetInputVar:
-    type: VariableReference
-    properties:
-      trueValues?: string[] # defaults to [ '1', 'true', 'yes' ]
   SetOperation:
+    type: string
+    enum:
+      - intersect
+      - union
+      - minus
+  Step:
     type: object
     properties:
-      operation:
-        type: string
-        enum:
-          - intersect
-          - union
-          - minus
-      leftOperation?: SetOperation
-      leftVariable?: string
-      rightOperation?: SetOperation
-      rightVariable?: string
+      key: string
+      operation: SetOperation
+      leftStepKey?: string
+      leftVariable?: VariableSpec
+      leftVariableTrueValues?: string[]
+      rightStepKey?: string
+      rightVariable?: VariableSpec
+      rightVariableTrueValues?: string[]
   AdvancedSubsetConfig:
     type: object
     properties:
-      operationTree: SetOperation
-      inputVariables: AdvancedSubsetInputVar[]
+      rootStepKey: string
+      steps: Step[]
   EcmaScriptExpressionEvalConfig:
     type: object
     properties:
