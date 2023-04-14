@@ -8,10 +8,7 @@ import org.veupathdb.service.eda.generated.model.APIFilter;
 import org.veupathdb.service.eda.generated.model.DerivationType;
 import org.veupathdb.service.eda.generated.model.VariableSpec;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
 
@@ -55,12 +52,13 @@ public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
 
   @Override
   public void validateDependedVariableLocations() {
-    // find the ancestors of the common entity of the input vars, which should be a descendant of the target entity
+    // the common entity of the input vars must be the same as or a descendant of the target entity
+    String inputVarsEntityId = getCommonEntityId();
     List<String> ancestorIds = _metadata
-        .getAncestors(_metadata.getEntity(getCommonEntityId()).orElseThrow())
+        .getAncestors(_metadata.getEntity(inputVarsEntityId).orElseThrow())
         .stream().map(EntityDef::getId).toList();
-    if (!ancestorIds.contains(getEntity().getId())) {
-      throw new BadRequestException("Input vars configured for reduction derived var " + getFunctionName() + " are not on a descendant entity.");
+    if (!inputVarsEntityId.equals(getEntityId()) && !ancestorIds.contains(getEntityId())) {
+      throw new BadRequestException("Input vars configured for reduction derived var " + getFunctionName() + " are not on the target or a descendant entity.");
     }
   }
 
