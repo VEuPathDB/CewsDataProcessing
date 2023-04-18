@@ -3,6 +3,7 @@ package org.veupathdb.service.eda.ms.core.stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gusdb.fgputil.DelimitedDataParser;
+import org.gusdb.fgputil.json.JsonUtil;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -138,12 +139,29 @@ public class EntityStream implements Iterator<Map<String,String>> {
     return lastRow;
   }
 
+  /**
+   * If the stored row matches the predicate, then returns it but does not iterate (iteration must be
+   * handled independently by extra calls to <code>next()</code>).  If no more rows or if stored row
+   * does not match the predicate, returns an empty optional (and still does not iterate).
+   *
+   * This is used for inheriting parent vars across multiple children of that parent (i.e. whose IDs
+   * match the parent's ID).  The parent row is retained until a child comes along that does not
+   * match it.
+   *
+   */
   public Optional<Map<String, String>> getPreviousRowIf(Predicate<Map<String, String>> condition) {
     return hasNext() && condition.test(_lastRowRead)
       ? Optional.of(_lastRowRead)
       : Optional.empty();
   }
 
+  /**
+   * If the stored row matches the predicate, then returns it and reads the next row, storing it.  If no
+   * more rows or if stored row does not match the predicate, returns an empty optional and does not iterate.
+   *
+   * This is used for reductions to efficiently continue reading child rows that match a parent ID until a
+   * child row is found that does not match the parent ID.
+   */
   public Optional<Map<String, String>> getNextRowIf(Predicate<Map<String, String>> condition) {
     return hasNext() && condition.test(_lastRowRead)
       ? Optional.of(next())
@@ -163,6 +181,7 @@ public class EntityStream implements Iterator<Map<String,String>> {
         indent + "  expectedNativeColumns: [" + NL +
         _expectedNativeColumns.stream().map(c -> indent + "    " + c.toString() + NL).collect(Collectors.joining()) +
         indent + "  streamSpec: " + NL + _streamSpec.toString(indentSize + 2) + NL +
+        indent + "  filtersOverride: " + _streamSpec.getFiltersOverride().map(JsonUtil::serializeObject).orElse("none") + NL +
         indent + "}";
   }
 

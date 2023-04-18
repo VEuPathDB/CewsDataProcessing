@@ -1,5 +1,8 @@
 package org.veupathdb.service.eda.ms.core.stream;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.gusdb.fgputil.FormatUtil;
 import org.gusdb.fgputil.Tuples.TwoTuple;
 import org.gusdb.fgputil.functional.Functions;
 import org.gusdb.fgputil.validation.ValidationException;
@@ -24,6 +27,8 @@ import java.util.stream.Collectors;
 import static org.gusdb.fgputil.FormatUtil.NL;
 
 public class StreamingEntityNode extends EntityStream {
+
+  private static final Logger LOG = LogManager.getLogger(StreamingEntityNode.class);
 
   protected static final int INITIAL_DEPENDENCY_DEPTH = 0;
   private static final int MAX_ENTITY_DEPENDENCY_DEPTH = 15;
@@ -106,8 +111,10 @@ public class StreamingEntityNode extends EntityStream {
         }
       }
       else if (ancestorEntityOutputVars.containsKey(var.getEntityId())) {
-        // var is native to ancestor entity; add to that entry
-        ancestorEntityOutputVars.get(var.getEntityId()).add(var);
+        // var is native to ancestor entity; add to that entry but skip IDs (we get them for free)
+        if (var.getSource() != VariableSource.ID) {
+          ancestorEntityOutputVars.get(var.getEntityId()).add(var);
+        }
       }
       else {
         // bad variable; can't deliver vars from descendants or "over the hump" entities
@@ -159,9 +166,10 @@ public class StreamingEntityNode extends EntityStream {
 
   @Override
   public void acceptDataStreams(Map<String, InputStream> dataStreams) {
-    super.acceptDataStreams(dataStreams);
+    // order matters here; incoming data must be initialized before this node initializes its first row
     _ancestorStreams.forEach(s -> s.acceptDataStreams(dataStreams));
     _reductionStreams.forEach(pair -> pair.getSecond().acceptDataStreams(dataStreams));
+    super.acceptDataStreams(dataStreams);
   }
 
   @Override
@@ -183,6 +191,7 @@ public class StreamingEntityNode extends EntityStream {
       row.put(transform.getColumnName(), transform.getValue(row));
     }
 
+    LOG.info("Returning next row: " + FormatUtil.prettyPrint(row, FormatUtil.Style.SINGLE_LINE));
     return row;
   }
 
