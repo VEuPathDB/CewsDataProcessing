@@ -113,11 +113,15 @@ public class EntityStream implements Iterator<Map<String,String>> {
     }
   }
 
+  protected Map<String, String> applyDerivedVars(Map<String, String> row) {
+    return row;
+  }
+
   // returns null if no more rows
   private Map<String, String> readRow() {
     try {
       final String nextLine = _reader.readLine();
-      return nextLine == null ? null : _parser.parseLine(nextLine);
+      return nextLine == null ? null : applyDerivedVars(_parser.parseLine(nextLine));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

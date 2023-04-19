@@ -10,6 +10,7 @@ import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
 import org.veupathdb.service.eda.generated.model.VariableSpec;
 import org.veupathdb.service.eda.ms.Resources;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
@@ -47,6 +48,20 @@ public class MergedTabularRequestResources extends RequestResources {
   }
 
   public ResponseFuture getSubsettingTabularStream(StreamSpec spec) {
+
+    // for derived var plugins, need to ensure filters overrides produce set of rows which are a subset of the rows
+    //   produced by the "global" filters.  Easiest way to do that is to simply combine the filters, resulting in
+    //   an intersection of the global subset and the overridden subset
+    if (spec.getFiltersOverride().isPresent() && !_subsetFilters.isEmpty()) {
+      StreamSpec modifiedSpec = new StreamSpec(spec.getStreamName(), spec.getEntityId());
+      modifiedSpec.addAll(spec);
+      List<APIFilter> combinedFilters = new ArrayList<>();
+      combinedFilters.addAll(_subsetFilters);
+      combinedFilters.addAll(spec.getFiltersOverride().get());
+      modifiedSpec.setFiltersOverride(combinedFilters);
+      spec = modifiedSpec;
+    }
+
     return _subsetSvc.getTabularDataStream(_metadata, _subsetFilters, spec);
   }
 

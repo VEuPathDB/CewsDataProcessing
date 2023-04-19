@@ -2,7 +2,6 @@ package org.veupathdb.service.eda.ms.core.stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.FormatUtil;
 import org.gusdb.fgputil.Tuples.TwoTuple;
 import org.gusdb.fgputil.functional.Functions;
 import org.gusdb.fgputil.validation.ValidationException;
@@ -173,10 +172,7 @@ public class StreamingEntityNode extends EntityStream {
   }
 
   @Override
-  public Map<String, String> next() {
-
-    // read the row from this node's stream
-    Map<String,String> row = super.next();
+  protected Map<String, String> applyDerivedVars(Map<String, String> row) {
 
     // inherit vars from ancestor streams
     for (StreamingEntityNode ancestorStream : _ancestorStreams) {
@@ -191,7 +187,6 @@ public class StreamingEntityNode extends EntityStream {
       row.put(transform.getColumnName(), transform.getValue(row));
     }
 
-    LOG.info("Returning next row: " + FormatUtil.prettyPrint(row, FormatUtil.Style.SINGLE_LINE));
     return row;
   }
 
