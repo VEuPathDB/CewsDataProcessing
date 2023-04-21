@@ -125,7 +125,7 @@ public class ServiceExternal implements Merging {
     }
     catch (ValidationException e) {
       LOG.error("Invalid request", e);
-      throw new BadRequestException(e.toString());
+      throw new BadRequestException(e.getMessage());
     }
   }
 
