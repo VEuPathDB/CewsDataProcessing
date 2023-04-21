@@ -15,6 +15,9 @@ import org.veupathdb.service.eda.ms.core.derivedvars.DerivedVariableFactory;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import static org.gusdb.fgputil.FormatUtil.NL;
 
 public class RequestResources {
 
@@ -40,7 +43,10 @@ public class RequestResources {
     _metadata = new ReferenceMetadata(studyDetail);
     _derivedVariableSpecs = request.getDerivedVariables();
     _derivedVariableFactory = new DerivedVariableFactory(_metadata, _derivedVariableSpecs);
-    for (DerivedVariable derivedVar : _derivedVariableFactory.getAllDerivedVars()) {
+    List<DerivedVariable> orderedDerivedVars = _derivedVariableFactory.getAllDerivedVars();
+    LOG.debug("Will validate and incorporate derived vars in the following order: " + NL + orderedDerivedVars.stream().map(DerivedVariable::getColumnName).collect(Collectors.joining(NL)));
+    for (DerivedVariable derivedVar : orderedDerivedVars) {
+      LOG.debug("Validating depended vars of " + derivedVar.getColumnName() + " of type " + derivedVar.getFunctionName());
       // this call lets the plugins do additional setup where they can assume depended var metadata is incorporated
       derivedVar.validateDependedVariables();
       // incorporate this derived variable

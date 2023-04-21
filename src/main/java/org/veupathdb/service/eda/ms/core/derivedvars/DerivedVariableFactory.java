@@ -2,6 +2,7 @@ package org.veupathdb.service.eda.ms.core.derivedvars;
 
 import jakarta.ws.rs.BadRequestException;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.BiFunctionWithException;
+import org.gusdb.fgputil.validation.ValidationException;
 import org.gusdb.fgputil.workflow.DependencyElement;
 import org.gusdb.fgputil.workflow.DependencyResolver;
 import org.veupathdb.service.eda.common.model.EntityDef;
@@ -34,7 +35,7 @@ public class DerivedVariableFactory {
 
   public DerivedVariableFactory(
       ReferenceMetadata metadata,
-      List<DerivedVariableSpec> derivedVariableSpecs) {
+      List<DerivedVariableSpec> derivedVariableSpecs) throws ValidationException {
     _metadata = metadata;
     _incomingSpecs = derivedVariableSpecs;
     List<DerivedVariable> unorderedDerivedVars = new ArrayList<>();
@@ -46,7 +47,7 @@ public class DerivedVariableFactory {
     _allDerivedVariablesOrdered = orderInstancesAndCheckCircularDependencies(unorderedDerivedVars);
   }
 
-  private void addDerivedVariableInstances(List<DerivedVariableSpec> derivedVariableSpecs, List<DerivedVariable> allInstanceList) {
+  private void addDerivedVariableInstances(List<DerivedVariableSpec> derivedVariableSpecs, List<DerivedVariable> allInstanceList) throws ValidationException {
     for (DerivedVariableSpec spec : derivedVariableSpecs) {
       // check name against transforms
       boolean found = addDerivedVariableInstance(spec, Transforms.getPlugins(), _transforms, allInstanceList);
@@ -62,7 +63,7 @@ public class DerivedVariableFactory {
       DerivedVariableSpec spec,
       PluginMap<T> plugins,
       Map<String, List<T>> typedInstanceMap,
-      List<DerivedVariable> allInstanceList) {
+      List<DerivedVariable> allInstanceList) throws ValidationException {
     try {
       BiFunctionWithException<ReferenceMetadata, DerivedVariableSpec, T> builder = plugins.get(spec.getFunctionName());
       if (builder == null) {
@@ -86,7 +87,7 @@ public class DerivedVariableFactory {
       }
       return true;
     }
-    catch (RuntimeException e) {
+    catch (ValidationException | RuntimeException e) {
       throw e;
     }
     catch (Exception e) {

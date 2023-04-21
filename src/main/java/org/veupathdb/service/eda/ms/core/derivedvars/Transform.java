@@ -23,7 +23,7 @@ public abstract class Transform<T> extends AbstractDerivedVariable<T> {
     List<String> ancestorIds = _metadata.getAncestors(getEntity()).stream().map(EntityDef::getId).toList();
     for (VariableSpec spec : getRequiredInputVars()) {
       _metadata.getVariable(spec).orElseThrow(() ->
-          new BadRequestException("Input variable for reduction derived var " + getFunctionName() + " does not exist."));
+          new BadRequestException("Input variable for transform derived var " + getFunctionName() + " does not exist."));
       if (!spec.getEntityId().equals(getEntity().getId()) && !ancestorIds.contains(spec.getEntityId())) {
         throw new BadRequestException("Transform derived vars can only use input variables on the same entity on which they are declared or on an ancestor.");
       }
