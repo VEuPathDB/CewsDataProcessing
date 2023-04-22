@@ -133,6 +133,11 @@ dependencies {
   implementation("org.gusdb:fgputil-db:${fgputil}")
   implementation("org.gusdb:fgputil-client:${fgputil}")
 
+  // Graal for JS execution
+  implementation("org.graalvm.js:js:22.3.2")
+  implementation("org.graalvm.js:js-scriptengine:22.3.2")
+  implementation("org.graalvm.sdk:graal-sdk:22.3.2")
+  implementation("org.graalvm.truffle:truffle-api:22.3.2")
   // Jersey
   implementation("org.glassfish.jersey.core:jersey-server:3.1.1")
 

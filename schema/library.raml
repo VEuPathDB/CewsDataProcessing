@@ -656,11 +656,6 @@ types:
     properties:
       inputVariable: VariableSpec
       outputUnits: string
-  VariableReference:
-    type: object
-    properties:
-      name: string
-      variable: VariableSpec
   SetOperation:
     type: string
     enum:
@@ -683,10 +678,16 @@ types:
     properties:
       rootStepKey: string
       steps: Step[]
+  VariableReference:
+    type: object
+    properties:
+      name: string
+      variable: VariableSpec
   EcmaScriptExpressionEvalConfig:
     type: object
     properties:
       ecmaScriptExpression: string
+      nullResultOnAnyMissingInput: boolean
       inputVariables: VariableReference[]
       expectedType: API_VariableType
       expectedShape: API_VariableDataShape

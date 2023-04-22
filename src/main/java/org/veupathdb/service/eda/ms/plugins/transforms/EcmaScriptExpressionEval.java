@@ -11,6 +11,7 @@ import org.veupathdb.service.eda.generated.model.*;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -24,6 +25,7 @@ public class EcmaScriptExpressionEval extends Transform<EcmaScriptExpressionEval
   private List<VariableReference> _variableRefs;
   private APIVariableType _expectedType;
   private APIVariableDataShape _expectedShape;
+  private boolean _nullResultOnAnyMissingInput;
   private ScriptEngine _engine;
   private List<TwoTuple<String, APIVariableType>> _scriptParams;
 
@@ -38,6 +40,7 @@ public class EcmaScriptExpressionEval extends Transform<EcmaScriptExpressionEval
     _variableRefs = config.getInputVariables();
     _expectedType = config.getExpectedType();
     _expectedShape = config.getExpectedShape();
+    _nullResultOnAnyMissingInput = config.getNullResultOnAnyMissingInput();
   }
 
   @Override
@@ -92,19 +95,25 @@ public class EcmaScriptExpressionEval extends Transform<EcmaScriptExpressionEval
   @Override
   public String getValue(Map<String, String> row) {
     try {
-      List<Object> parameters = _scriptParams.stream()
-          .map(var -> {
-            String valueStr = row.get(var.getKey());
-            if (valueStr.isEmpty()) throw new NoSuchElementException();
-            Object obj = switch (var.getSecond()) {
-              case INTEGER -> Integer.parseInt(valueStr);
-              case NUMBER -> Double.parseDouble(valueStr);
-              case STRING -> valueStr;
-              default -> Functions.doThrow(() -> new IllegalStateException("Should already have checked variable types."));
-            };
-            return obj;
-          })
-          .toList();
+      List<Object> parameters = new ArrayList<>();
+      for (TwoTuple<String, APIVariableType> var : _scriptParams) {
+        String valueStr = row.get(var.getKey());
+        if (valueStr.isEmpty()) {
+          if (_nullResultOnAnyMissingInput)
+            return "";
+          else
+            parameters.add(null);
+        }
+        else { // non-empty value; coerce to the correct object
+          Object obj = switch (var.getSecond()) {
+            case INTEGER -> Integer.parseInt(valueStr);
+            case NUMBER -> Double.parseDouble(valueStr);
+            case STRING -> valueStr;
+            default -> Functions.doThrow(() -> new IllegalStateException("Should already have checked variable types."));
+          };
+          parameters.add(obj);
+        }
+      }
       return callFunction(parameters);
     }
     catch (NoSuchElementException e) {

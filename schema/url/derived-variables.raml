@@ -52,11 +52,6 @@ types:
       inputVariable: VariableSpec
       outputUnits: string
 
-  VariableReference:
-    properties:
-      name: string
-      variable: VariableSpec
-
   SetOperation:
     type: string
     enum: [ 'intersect', 'union', 'minus' ]
@@ -81,9 +76,15 @@ types:
       rootStepKey: string
       steps: Step[]
 
+  VariableReference:
+    properties:
+      name: string
+      variable: VariableSpec
+
   EcmaScriptExpressionEvalConfig:
     properties:
       ecmaScriptExpression: string
+      nullResultOnAnyMissingInput: boolean
       inputVariables: VariableReference[]
       expectedType: API_VariableType
       expectedShape: API_VariableDataShape
