@@ -8,12 +8,28 @@ import org.veupathdb.service.eda.generated.model.VariableSpec;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Parent class providing logic and interface common to all Transform derived variables, that is: a derived variable
+ * that operates on data in a single row to produce a single value in the same entity.  Instances of this
+ * class represent a derived variable with a certain configuration which will be generated across an entire set of
+ * rows.  Thus, the getValue() method's implementation should be stateless/pure so its results are reproducible
+ * regardless of subset.
+ *
+ * @param <T> type of configuration object for this derived variable plugin
+ */
 public abstract class Transform<T> extends AbstractDerivedVariable<T> {
 
+  /**
+   * Primary data implementation method which produces a single value from a row of values.  The incoming row
+   * should NOT be manipulated; it is only for pulling out values needed to calculate this derived value.
+   *
+   * @param row row of existing values
+   * @return derived variable value for this row
+   */
   public abstract String getValue(Map<String,String> row);
 
   @Override
-  public DerivationType getDerivationType() {
+  public final DerivationType getDerivationType() {
     return DerivationType.TRANSFORM;
   }
 

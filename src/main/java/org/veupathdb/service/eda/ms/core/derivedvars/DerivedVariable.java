@@ -7,8 +7,18 @@ import org.veupathdb.service.eda.generated.model.*;
 
 import java.util.List;
 
+/**
+ * Provides top-level interface for a DerivedVariable.  The methods provided are those called by the surrounding
+ * derived variable framework, which all derived variables must implement (though many defaults are implemented by
+ * AbstractDerivedVariable and its children).  An instance of the implementing class is created for each specified
+ * configuration in the request.  In that sense, and instance of this interface is a "plugin" but also an instance
+ * of the derived variable itself.  See methods in DerivedVariableFactory for how instances are created.
+ */
 public interface DerivedVariable extends DerivedVariableMetadata {
 
+  /**
+   * Universal empty value; indicates 'null' or missing data in a tabular response and should be used in lieu of null.
+   */
   String EMPTY_VALUE = "";
 
   /**

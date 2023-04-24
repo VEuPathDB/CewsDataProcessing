@@ -16,6 +16,12 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 
+/**
+ * Subclass of RequestResources which supplements the superclass's resources with target entity, subset filters, and
+ * compute information needed for tabular requests.  This includes fetching compute job metadata, computed variable
+ * metadata (incorporated into the ReferenceMetadata instance), and a method which provides the actual computed
+ * variable tabular stream, all by querying the compute service.
+ */
 public class MergedTabularRequestResources extends RequestResources {
 
   private final EdaComputeClient _computeSvc;

@@ -24,16 +24,20 @@ import static org.gusdb.fgputil.FormatUtil.TAB;
 
 /**
  * Base class for entity streams; handles reading tabular data into a map for
- * each row and caching the last row read for inspection before delivery.
+ * each row, making a call to add inherited and derived vars (actual implementation
+ * handled by a subclass), and caching the last produced row for inspection before
+ * delivery.  This row may be delivered more than once depending on the location of
+ * this data stream in the entity tree.
+ *
  * Serves as a base class for stream processor nodes that abstracts away the
  * reading of the tabular data (leaving tree-related and derived variable logic
- * to the superclass).
+ * to a subclass).
  *
  * The lifecycle of this class is:
  * 1. construction
  * 2. assignment of the stream spec (typically by the subclass in its constructor)
  * 3. assignment of the data stream
- * 4. reading tabular rows from stream and outputting data Maps as requested
+ * 4. reading tabular rows from stream, incorporating DVs, and outputting data Maps as requested
  */
 public class EntityStream implements Iterator<Map<String,String>> {
 
@@ -113,6 +117,14 @@ public class EntityStream implements Iterator<Map<String,String>> {
     }
   }
 
+  /**
+   * By default this class does not apply derived or inherited vars.  This way it can still be used stand-alone to
+   * process computed variable tabular data streams, and could be used (but is not) in cases where no derived or
+   * inherited vars exist.
+   *
+   * @param row row of data read from the tabular data stream
+   * @return row of data with inherited and derived variables applied.  This CAN be the same object as the parameter.
+   */
   protected Map<String, String> applyDerivedVars(Map<String, String> row) {
     return row;
   }

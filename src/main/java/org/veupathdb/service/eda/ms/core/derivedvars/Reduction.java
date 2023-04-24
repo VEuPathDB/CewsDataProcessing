@@ -10,19 +10,55 @@ import org.veupathdb.service.eda.generated.model.VariableSpec;
 
 import java.util.*;
 
+/**
+ * Parent class providing logic and interface common to all Reduction derived variables, that is: a derived variable
+ * that collects values from rows of a descendant entity and reduces them into a single value.  Instances of this
+ * class represent a derived variable with a certain configuration which will be generated across an entire set of
+ * rows; to do so, it provides an implementation of a Reducer, which generates a single reduction value (one row on the
+ * output entity) and then is thrown away.  A new Reducer is created to produce the reduction derived variable value
+ * on the next row.
+ *
+ * @param <T> type of configuration object for this derived variable plugin
+ */
 public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
 
+  /**
+   * Implementations of this interface produce reduction derived variable values from a set of incoming descendant
+   * entity rows.
+   */
   public interface Reducer {
+
+    /**
+     * Adds a row to this reduction; values should be incorporated into a state where a final value can be returned
+     * by getResultingValue()
+     *
+     * @param nextRow the next row to process
+     */
     void addRow(Map<String,String> nextRow);
+
+    /**
+     * Produces the resulting value.  After this method is called, no more calls will be made to addRow(); however,
+     * it may be called before any calls to addRow occur (if there are zero input rows).  Thus any initialization
+     * needed in this class should happen in a constructor or by instantiating fields in their declarations.
+     *
+     * @return final value for this derived variable
+     */
     String getResultingValue();
   }
 
+  /**
+   * Returns an implementation of a Reducer which will operate on a set of descendant entity input rows to create a
+   * value on this entity's row.  A new Reducer is requested for each row, so it can contain state used to aggregate
+   * information before returning a resulting value.
+   *
+   * @return instance of a Reducer which will create a reduction derived variable value for a single row
+   */
   public abstract Reducer createReducer();
 
   private StreamSpec _inputStreamSpec;
 
   @Override
-  public DerivationType getDerivationType() {
+  public final DerivationType getDerivationType() {
     return DerivationType.REDUCTION;
   }
 

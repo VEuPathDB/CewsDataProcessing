@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.server.ContainerRequest;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.lib.container.jaxrs.providers.UserProvider;
+import org.veupathdb.lib.container.jaxrs.server.annotations.Authenticated;
 import org.veupathdb.lib.container.jaxrs.server.annotations.DisableJackson;
 import org.veupathdb.lib.container.jaxrs.utils.RequestKeys;
 import org.veupathdb.service.eda.common.auth.StudyAccess;
@@ -22,6 +23,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+/**
+ * Implementation of endpoints at or below the /merging top-level endpoint.  These endpoints are intended to be
+ * accessible via the external docker network; therefore authentication/authorization is required.
+ */
+@Authenticated(allowGuests = true)
 public class ServiceExternal implements Merging {
 
   private static final Logger LOG = LogManager.getLogger(ServiceExternal.class);
@@ -128,7 +134,5 @@ public class ServiceExternal implements Merging {
       throw new BadRequestException(e.getMessage());
     }
   }
-
-
 
 }

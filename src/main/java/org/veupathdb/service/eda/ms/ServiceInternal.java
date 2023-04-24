@@ -12,6 +12,12 @@ import java.util.Map.Entry;
 
 import static org.veupathdb.service.eda.ms.ServiceExternal.*;
 
+/**
+ * Implementation of endpoints at or below the /merging-internal top-level endpoint.  These endpoints are intended to be
+ * accessible only via the internal docker network; therefore although authentication is present, not dataset access
+ * restrictions are enforced.  The compute and data service plugins have full access to the datasets so they can
+ * process the data down into whatever product they produce.
+ */
 @Authenticated(allowGuests = true)
 public class ServiceInternal implements MergingInternal {
 

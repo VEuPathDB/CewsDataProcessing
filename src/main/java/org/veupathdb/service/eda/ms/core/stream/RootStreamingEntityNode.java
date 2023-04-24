@@ -21,6 +21,19 @@ import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 
+/**
+ * Special instance of StreamingEntityNode which is used as the root of the entity stream tree.  As the root, its
+ * additional responsibilities are:
+ *
+ * 1. Return an ordered row containing only the originally requested columns (all other nodes provide "extra"
+ *    rows and are unordered)
+ * 2. Collects StreamSpecs from the tree and logs them before returning
+ * 3. Is the 'public' distributor of the data streams to the tree
+ * 4. Applies computed vars if necessary.  There can be only one computed entity and it must be this node's
+ *    entity (the target entity) or an ancestor
+ * 5. Provides a method indicating whether any data manipulation is required (i.e. if the caller can get away
+ *    with streaming its single tabular stream (from subsetting) without using the entity tree at all (much quicker)
+ */
 public class RootStreamingEntityNode extends StreamingEntityNode {
 
   private static final Logger LOG = LogManager.getLogger(RootStreamingEntityNode.class);

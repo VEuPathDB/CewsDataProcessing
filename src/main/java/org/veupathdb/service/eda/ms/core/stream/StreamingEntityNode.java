@@ -25,6 +25,12 @@ import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 
+/**
+ * Child class of EntityStream which handles the generation and application of inherited and derived variables.  It is
+ * through this class that the entity stream tree's structure is built; i.e. each instance is a node in the tree, and
+ * data flows through these nodes from the leaves to the root, which is a special subclass instance
+ * (RootStreamingEntityNode).
+ */
 public class StreamingEntityNode extends EntityStream {
 
   private static final Logger LOG = LogManager.getLogger(StreamingEntityNode.class);
@@ -165,7 +171,8 @@ public class StreamingEntityNode extends EntityStream {
 
   @Override
   public void acceptDataStreams(Map<String, InputStream> dataStreams) {
-    // order matters here; incoming data must be initialized before this node initializes its first row
+    // order matters here; incoming data must be initialized before this node
+    //   initializes its first row or required columns will not be present
     _ancestorStreams.forEach(s -> s.acceptDataStreams(dataStreams));
     _reductionStreams.forEach(pair -> pair.getSecond().acceptDataStreams(dataStreams));
     super.acceptDataStreams(dataStreams);

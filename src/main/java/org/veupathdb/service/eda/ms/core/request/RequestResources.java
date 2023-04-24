@@ -19,6 +19,14 @@ import java.util.stream.Collectors;
 
 import static org.gusdb.fgputil.FormatUtil.NL;
 
+/**
+ * Processes and validates incoming request data for tabular and derived variable metadata requests.  This class is
+ * responsible for providing a ReferenceMetadata which includes derived variables generated from the passed derived
+ * variable specs.  It also provides a DerivedVariableFactory from which plugin instances are delivered.
+ *
+ * Note the superclass MergedTabularRequestResources, which supplements this class with target entity, subset filters,
+ * and compute information needed for tabular requests.
+ */
 public class RequestResources {
 
   private static final Logger LOG = LogManager.getLogger(RequestResources.class);

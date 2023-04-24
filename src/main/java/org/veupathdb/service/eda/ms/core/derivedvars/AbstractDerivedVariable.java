@@ -19,6 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Provides basic functionality all derived variable plugins need, e.g. converting the configuration object into
+ * the specified generic param
+ *
+ * @param <T> type of configuration object for this derived variable plugin
+ */
 public abstract class AbstractDerivedVariable<T> extends VariableSpecImpl implements DerivedVariable {
 
   private static final Logger LOG = LogManager.getLogger(AbstractDerivedVariable.class);
