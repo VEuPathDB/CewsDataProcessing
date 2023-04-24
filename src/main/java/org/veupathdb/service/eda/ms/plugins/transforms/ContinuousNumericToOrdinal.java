@@ -49,7 +49,7 @@ public class ContinuousNumericToOrdinal extends Transform<ContinuousNumericRecod
     _inputColumn = VariableDef.toDotNotation(_inputVar);
     _imputeZero = Optional.ofNullable(config.getImputeZero()).orElse(false);
     _codingRules = config.getRules().stream().map(RuleApplier::new).toList();
-    _unmappedValue = Optional.ofNullable(config.getUnmappedValue()).orElse("");
+    _unmappedValue = Optional.ofNullable(config.getUnmappedValue()).orElse(EMPTY_VALUE);
   }
 
   @Override
@@ -88,7 +88,7 @@ public class ContinuousNumericToOrdinal extends Transform<ContinuousNumericRecod
     String value = row.get(_inputColumn);
     double d = 0;
     if (value.isEmpty()) {
-      if (!_imputeZero) return "";
+      if (!_imputeZero) return EMPTY_VALUE;
     }
     else {
       d = Double.parseDouble(value);

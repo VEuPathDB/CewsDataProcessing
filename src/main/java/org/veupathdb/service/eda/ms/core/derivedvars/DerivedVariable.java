@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface DerivedVariable extends DerivedVariableMetadata {
 
+  String EMPTY_VALUE = "";
+
   /**
    * @return name of this derived variable plugin; this is the
    * name used by clients to identify the desired plugin

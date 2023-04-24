@@ -27,7 +27,7 @@ public class CategoricalRecoding extends Transform<CategoricalRecodingConfig> {
     _inputVar = config.getInputVariable();
     _inputColumn = VariableDef.toDotNotation(_inputVar);
     _recodingRules = config.getRules();
-    _unmappedValue = Optional.ofNullable(config.getUnmappedValue()).orElse("");
+    _unmappedValue = Optional.ofNullable(config.getUnmappedValue()).orElse(EMPTY_VALUE);
   }
 
   @Override

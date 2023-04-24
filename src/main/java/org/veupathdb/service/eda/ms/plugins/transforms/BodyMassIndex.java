@@ -75,7 +75,7 @@ public class BodyMassIndex extends Transform<BodyMassIndexConfig> {
     String rawHeight = row.get(_heightColumn);
     String rawWeight = row.get(_weightColumn);
     // if either value is missing return missing
-    if (rawHeight.isBlank() || rawWeight.isBlank()) return "";
+    if (rawHeight.isBlank() || rawWeight.isBlank()) return EMPTY_VALUE;
     // BMI = kg/(m^2), convert units if needed
     double height = Unit.METER.convertFrom(_heightUnit, Double.parseDouble(rawHeight));
     double weight = Unit.KILOGRAM.convertFrom(_weightUnit, Double.parseDouble(rawWeight));

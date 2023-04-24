@@ -65,7 +65,7 @@ public class UnitConversion extends Transform<UnitConversionConfig> {
   @Override
   public String getValue(Map<String, String> row) {
     String inValue = row.get(_inputColumn);
-    return inValue.isEmpty() ? "" : String.valueOf(_inputUnit.convertTo(_outputUnit, Double.parseDouble(inValue)));
+    return inValue.isEmpty() ? EMPTY_VALUE : String.valueOf(_inputUnit.convertTo(_outputUnit, Double.parseDouble(inValue)));
   }
 
 }
