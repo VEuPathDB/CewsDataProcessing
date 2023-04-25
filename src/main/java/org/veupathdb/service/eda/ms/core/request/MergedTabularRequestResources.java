@@ -1,9 +1,11 @@
 package org.veupathdb.service.eda.ms.core.request;
 
 import jakarta.ws.rs.BadRequestException;
+import org.gusdb.fgputil.ListBuilder;
 import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.EdaComputeClient;
+import org.veupathdb.service.eda.common.client.spec.EdaMergingSpecValidator;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.generated.model.APIFilter;
 import org.veupathdb.service.eda.generated.model.MergedEntityTabularPostRequest;
@@ -15,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Subclass of RequestResources which supplements the superclass's resources with target entity, subset filters, and
@@ -39,7 +42,13 @@ public class MergedTabularRequestResources extends RequestResources {
     _computeInfo = Optional.ofNullable(request.getComputeSpec())
         .map(spec -> new ComputeInfo(spec.getComputeName(),
             new EdaComputeClient.ComputeRequestBody(_metadata.getStudyId(), _subsetFilters, _derivedVariableSpecs, spec.getComputeConfig())));
+
+    // incorporate computed metadata (if compute info present)
     incorporateCompute();
+
+    // validation of incoming request
+    //  (validation based specifically on the requested entity done during spec creation)
+    validateIncomingRequest();
   }
 
   private void incorporateCompute() {
@@ -51,6 +60,29 @@ public class MergedTabularRequestResources extends RequestResources {
         info.setMetadata(_computeSvc.getJobVariableMetadata(info.getComputeName(), info.getRequestBody()));
     });
     _computeInfo.ifPresent(computeInfo -> _metadata.incorporateComputedVariables(computeInfo.getVariables()));
+  }
+
+  private void validateIncomingRequest() throws ValidationException {
+
+    // create a stream spec from the request input and validate using merge svc spec validator
+    StreamSpec requestSpec = new StreamSpec("incoming", _targetEntityId);
+    requestSpec.addAll(_outputVarSpecs);
+    new EdaMergingSpecValidator()
+        .validateStreamSpecs(ListBuilder.asList(requestSpec), _metadata)
+        .throwIfInvalid();
+
+    // if compute was requested, make sure the computed entity is the
+    //   same as, or an ancestor of, the target entity of this request
+    if (_computeInfo.isPresent()) {
+      Predicate<String> isComputeVarEntity = entityId -> entityId.equals(_computeInfo.get().getComputeEntity());
+      if (!isComputeVarEntity.test(_targetEntityId) && _metadata
+          .getAncestors(_metadata.getEntity(_targetEntityId).orElseThrow()).stream()
+          .filter(entity -> isComputeVarEntity.test(entity.getId()))
+          .findFirst().isEmpty()) {
+        // we don't perform reductions on computed vars so they must be on the target entity or an ancestor
+        throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
+      }
+    }
   }
 
   public ResponseFuture getSubsettingTabularStream(StreamSpec spec) {

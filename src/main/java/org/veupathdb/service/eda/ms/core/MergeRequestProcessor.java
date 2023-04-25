@@ -2,19 +2,17 @@ package org.veupathdb.service.eda.ms.core;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gusdb.fgputil.ListBuilder;
 import org.gusdb.fgputil.client.ResponseFuture;
 import org.gusdb.fgputil.functional.FunctionalInterfaces.ConsumerWithException;
 import org.gusdb.fgputil.functional.Functions;
 import org.gusdb.fgputil.iterator.IteratorUtil;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.client.StreamingDataClient;
-import org.veupathdb.service.eda.common.client.spec.EdaMergingSpecValidator;
 import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.generated.model.*;
+import org.veupathdb.service.eda.generated.model.VariableSpec;
 import org.veupathdb.service.eda.ms.core.request.ComputeInfo;
 import org.veupathdb.service.eda.ms.core.request.MergedTabularRequestResources;
 import org.veupathdb.service.eda.ms.core.stream.RootStreamingEntityNode;
@@ -24,11 +22,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static org.gusdb.fgputil.FormatUtil.TAB;
 import static org.veupathdb.service.eda.ms.core.stream.RootStreamingEntityNode.COMPUTED_VAR_STREAM_NAME;
 
+/**
+ * Top-level tabular request processing class, responsible for (in execution order):
+ *
+ * 1. initializing and collecting metadata
+ * 2. building an entity stream processing tree which will merge all incoming data streams
+ * 3. collecting stream specs for required streams
+ * 4. requesting streams from subsetting and compute services
+ * 5. determining whether a single required stream can be directly passed out as the response (with no merge processing)
+ * 6. distributing the incoming data streams to the entity stream processing tree
+ * 7. returning a consumer of the output stream which writes the merged streams
+ *
+ */
 public class MergeRequestProcessor {
 
   private static final Logger LOG = LogManager.getLogger(MergeRequestProcessor.class);
@@ -40,14 +49,12 @@ public class MergeRequestProcessor {
   }
 
   public Consumer<OutputStream> createMergedResponseSupplier() throws ValidationException {
+
+    // gather request resources
     String targetEntityId = _resources.getTargetEntityId();
     List<VariableSpec> outputVarSpecs = _resources.getOutputVariableSpecs();
     ReferenceMetadata metadata = _resources.getMetadata();
     Optional<ComputeInfo> computeInfo = _resources.getComputeInfo();
-
-    // validation of incoming request
-    //  (validation based specifically on the requested entity done during spec creation)
-    validateIncomingRequest(targetEntityId, outputVarSpecs, metadata, computeInfo);
 
     // request validated; convert requested entity and vars to defs
     EntityDef targetEntity = metadata.getEntity(targetEntityId).orElseThrow();
@@ -81,33 +88,6 @@ public class MergeRequestProcessor {
       // build and process streams
       StreamingDataClient.buildAndProcessStreams(new ArrayList<>(requiredStreams.values()), streamGenerator, streamProcessor);
     };
-  }
-
-  private static void validateIncomingRequest(
-      String targetEntityId,
-      List<VariableSpec> outputVars,
-      ReferenceMetadata metadata,
-      Optional<ComputeInfo> computeInfo) throws ValidationException {
-
-    // create a stream spec from the request input and validate using merge svc spec validator
-    StreamSpec requestSpec = new StreamSpec("incoming", targetEntityId);
-    requestSpec.addAll(outputVars);
-    new EdaMergingSpecValidator()
-      .validateStreamSpecs(ListBuilder.asList(requestSpec), metadata)
-      .throwIfInvalid();
-
-    // if compute was requested, make sure the computed entity is the
-    //   same as, or an ancestor of, the target entity of this request
-    if (computeInfo.isPresent()) {
-      Predicate<String> isComputeVarEntity = entityId -> entityId.equals(computeInfo.get().getComputeEntity());
-      if (!isComputeVarEntity.test(targetEntityId) && metadata
-          .getAncestors(metadata.getEntity(targetEntityId).orElseThrow()).stream()
-          .filter(entity -> isComputeVarEntity.test(entity.getId()))
-          .findFirst().isEmpty()) {
-        // we don't perform reductions on computed vars so they must be on the target entity or an ancestor
-        throw new ValidationException("Entity of computed variable must be the same as, or ancestor of, the target entity");
-      }
-    }
   }
 
   private static void writePassThroughStream(List<VariableSpec> outputVars, InputStream in, OutputStream out) {
