@@ -8,7 +8,6 @@ import org.veupathdb.service.eda.common.client.spec.StreamSpec;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
-import org.veupathdb.service.eda.common.plugin.util.PluginUtil;
 import org.veupathdb.service.eda.generated.model.VariableSpecImpl;
 
 import java.io.BufferedReader;
@@ -190,7 +189,7 @@ public class EntityStream implements Iterator<Map<String,String>> {
   }
 
   public String toString(int indentSize) {
-    String indent = PluginUtil.getIndent(indentSize);
+    String indent = " ".repeat(indentSize);
     return
         indent + "{" + NL +
         indent + "  entityIdColumnName: " + _entityIdColumnName + NL +

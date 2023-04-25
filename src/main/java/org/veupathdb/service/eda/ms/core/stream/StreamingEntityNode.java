@@ -14,7 +14,6 @@ import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
 import org.veupathdb.service.eda.common.model.VariableDef;
 import org.veupathdb.service.eda.common.model.VariableSource;
-import org.veupathdb.service.eda.common.plugin.util.PluginUtil;
 import org.veupathdb.service.eda.generated.model.APIFilter;
 
 import java.io.InputStream;
@@ -249,7 +248,7 @@ public class StreamingEntityNode extends EntityStream {
   }
 
   public String toString(int indentSize) {
-    String indent = PluginUtil.getIndent(indentSize);
+    String indent = " ".repeat(indentSize);
     return indent + "{" + NL +
         indent + "  entityIdColName: " + _entityIdColName + NL +
         indent + "  entityStreamProps: " + NL +
