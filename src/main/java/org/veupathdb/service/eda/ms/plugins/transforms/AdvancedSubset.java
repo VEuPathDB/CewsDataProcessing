@@ -89,6 +89,13 @@ public class AdvancedSubset extends Transform<AdvancedSubsetConfig> {
   }
 
   @Override
+  public List<String> getVocabulary() {
+    return List.of(
+        SubsetMembership.RETURNED_TRUE_VALUE,
+        SubsetMembership.RETURNED_FALSE_VALUE);
+  }
+
+  @Override
   public String getValue(Map<String, String> row) {
     return _operationTree.test(row)
         ? SubsetMembership.RETURNED_TRUE_VALUE

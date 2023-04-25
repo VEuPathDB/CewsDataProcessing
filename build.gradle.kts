@@ -79,7 +79,7 @@ repositories {
 
 // versions
 val coreLib       = "6.14.4"         // Container core lib version
-val edaCommon     = "11.0.0-beta3"         // EDA Common version
+val edaCommon     = "11.0.0-beta4"         // EDA Common version
 val fgputil       = "2.12.6-jakarta" // FgpUtil version
 
 // use local EdaCommon compiled schema if project exists, else use released version;

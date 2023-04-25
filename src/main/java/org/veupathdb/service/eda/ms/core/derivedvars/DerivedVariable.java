@@ -1,5 +1,7 @@
 package org.veupathdb.service.eda.ms.core.derivedvars;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.veupathdb.service.eda.common.model.EntityDef;
 import org.veupathdb.service.eda.common.model.ReferenceMetadata;
@@ -14,6 +16,18 @@ import java.util.List;
  * configuration in the request.  In that sense, and instance of this interface is a "plugin" but also an instance
  * of the derived variable itself.  See methods in DerivedVariableFactory for how instances are created.
  */
+// only serialize metadata fields since these are used directly to output metadata (not converted to DerivedVariableMetadataImpl)
+@JsonSerialize(as=DerivedVariableMetadata.class)
+@JsonPropertyOrder({
+    "entityId",
+    "variableId",
+    "derivationType",
+    "variableType",
+    "dataShape",
+    "vocabulary",
+    "units",
+    "dataRange"
+})
 public interface DerivedVariable extends DerivedVariableMetadata {
 
   /**

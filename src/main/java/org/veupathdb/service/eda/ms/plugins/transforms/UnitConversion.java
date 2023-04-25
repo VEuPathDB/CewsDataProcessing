@@ -16,6 +16,7 @@ public class UnitConversion extends Transform<UnitConversionConfig> {
 
   private VariableSpec _inputVariable;
   private String _inputColumn;
+  private String _userSpecifiedOutputUnit;
   private Unit _inputUnit;
   private Unit _outputUnit;
 
@@ -28,8 +29,9 @@ public class UnitConversion extends Transform<UnitConversionConfig> {
   protected void acceptConfig(UnitConversionConfig config) throws ValidationException {
     _inputVariable = config.getInputVariable();
     _inputColumn = VariableDef.toDotNotation(_inputVariable);
-    _outputUnit = Unit.findUnit(config.getOutputUnits()).orElseThrow(() ->
-        new ValidationException("Output unit '" + config.getOutputUnits() + "' is not a valid unit"));
+    _userSpecifiedOutputUnit = config.getOutputUnits();
+    _outputUnit = Unit.findUnit(_userSpecifiedOutputUnit).orElseThrow(() ->
+        new ValidationException("Output unit '" + _userSpecifiedOutputUnit + "' is not a valid unit"));
   }
 
   @Override
@@ -60,6 +62,11 @@ public class UnitConversion extends Transform<UnitConversionConfig> {
   @Override
   public APIVariableDataShape getDataShape() {
     return _metadata.getVariable(_inputVariable).orElseThrow().getDataShape();
+  }
+
+  @Override
+  public String getUnits() {
+    return _userSpecifiedOutputUnit;
   }
 
   @Override
