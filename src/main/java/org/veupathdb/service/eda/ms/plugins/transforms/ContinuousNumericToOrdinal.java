@@ -47,7 +47,6 @@ public class ContinuousNumericToOrdinal extends Transform<ContinuousNumericRecod
   protected void acceptConfig(ContinuousNumericRecodingConfig config) throws ValidationException {
     _inputVar = config.getInputVariable();
     _inputColumn = VariableDef.toDotNotation(_inputVar);
-    _imputeZero = Optional.ofNullable(config.getImputeZero()).orElse(false);
     _codingRules = config.getRules().stream().map(RuleApplier::new).toList();
     _unmappedValue = Optional.ofNullable(config.getUnmappedValue()).orElse(EMPTY_VALUE);
   }
@@ -55,6 +54,8 @@ public class ContinuousNumericToOrdinal extends Transform<ContinuousNumericRecod
   @Override
   protected void performSupplementalDependedVariableValidation() throws ValidationException {
     checkVariable("Input", _inputVar, List.of(APIVariableType.INTEGER, APIVariableType.NUMBER), List.of(APIVariableDataShape.CONTINUOUS));
+    VariableDef inputVarDef = _metadata.getVariable(_inputVar).orElseThrow(); // just checked so should never throw here
+    _imputeZero = inputVarDef.isImputeZero();
   }
 
   @Override

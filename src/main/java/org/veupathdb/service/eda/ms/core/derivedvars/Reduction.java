@@ -63,23 +63,18 @@ public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
   }
 
   public StreamSpec getInputStreamSpec() {
+    // cache this so only created once
     if (_inputStreamSpec == null) {
       EntityDef entity = _metadata.getEntity(getCommonEntityId()).orElseThrow();
+      List<VariableDef> idColumns = _metadata.getTabularColumns(entity, Collections.emptyList());
       _inputStreamSpec = new StreamSpec(UUID.randomUUID().toString(), entity.getId())
           .addVars(getRequiredInputVars().stream()
               // filter out IDs of the requested entity and its ancestors
-              .filter(var -> !isVariableInList(var, _metadata.getTabularColumns(entity, Collections.emptyList())))
+              .filter(var -> idColumns.stream().noneMatch(idCol -> VariableDef.isSameVariable(idCol, var)))
               .toList())
           .setFiltersOverride(getFiltersOverride());
     }
     return _inputStreamSpec;
-  }
-
-  private static boolean isVariableInList(VariableSpec var, List<VariableDef> list) {
-    for (VariableSpec listVar : list) {
-      if (VariableDef.isSameVariable(listVar, var)) return true;
-    }
-    return false;
   }
 
   protected List<APIFilter> getFiltersOverride() {

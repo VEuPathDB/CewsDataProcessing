@@ -78,7 +78,7 @@ public class DerivedVariableFactory {
       List<T> byEntityList = typedInstanceMap.computeIfAbsent(instance.getEntityId(), entityId -> new ArrayList<>());
 
       // only add if not already present (prevents infinite loop if circular dependency present)
-      if (byEntityList.stream().filter(i -> VariableDef.isSameVariable(i, instance)).findAny().isEmpty()) {
+      if (byEntityList.stream().noneMatch(i -> VariableDef.isSameVariable(i, instance))) {
 
         // add to the appropriate lists
         byEntityList.add(instance);
