@@ -1,6 +1,5 @@
 package org.veupathdb.service.eda.ms.core.derivedvars;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.ws.rs.BadRequestException;
 import org.apache.logging.log4j.LogManager;
@@ -33,9 +32,8 @@ public abstract class AbstractDerivedVariable<T> extends VariableSpecImpl implem
   protected ReferenceMetadata _metadata;
   protected String _displayName;
 
-  // essentially cached values so they are not calculated for each row
+  // cache the column name so it is not calculated for each row
   private String _columnName;
-  private List<String> _dependedColumnNames;
 
   protected abstract Class<T> getConfigClass();
 
@@ -71,11 +69,6 @@ public abstract class AbstractDerivedVariable<T> extends VariableSpecImpl implem
       throw new ValidationException(inputName + " variable must be of shape: [" + allowedShapesOrNull.stream()
           .map(APIVariableDataShape::getValue).collect(Collectors.joining(", ")) + "]");
     }
-  }
-
-  @Override
-  public String getFunctionName() {
-    return null;
   }
 
   @Override
@@ -120,11 +113,6 @@ public abstract class AbstractDerivedVariable<T> extends VariableSpecImpl implem
   }
 
   @Override
-  public List<VariableSpec> getRequiredInputVars() {
-    return null;
-  }
-
-  @Override
   public List<DerivedVariableSpec> getDependedDerivedVarSpecs() {
     return Collections.emptyList();
   }
@@ -137,11 +125,6 @@ public abstract class AbstractDerivedVariable<T> extends VariableSpecImpl implem
   @Override
   public String toString() {
     return "{ functionName: " + getFunctionName() + ", variable: " + VariableDef.toDotNotation(this) + " }";
-  }
-
-  @Override
-  public DerivationType getDerivationType() {
-    return null;
   }
 
   // setters of metadata properties are no-ops; used in JSON formatting only
