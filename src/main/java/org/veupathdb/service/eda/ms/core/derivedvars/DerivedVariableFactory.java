@@ -1,7 +1,6 @@
 package org.veupathdb.service.eda.ms.core.derivedvars;
 
 import jakarta.ws.rs.BadRequestException;
-import org.gusdb.fgputil.functional.FunctionalInterfaces.BiFunctionWithException;
 import org.gusdb.fgputil.validation.ValidationException;
 import org.gusdb.fgputil.workflow.DependencyElement;
 import org.gusdb.fgputil.workflow.DependencyResolver;
@@ -21,8 +20,12 @@ import static org.gusdb.fgputil.functional.Functions.wrapException;
 
 public class DerivedVariableFactory {
 
-  // convenience class for less verbose name
-  public static class PluginMap<T extends DerivedVariable> extends HashMap<String, BiFunctionWithException<ReferenceMetadata, DerivedVariableSpec, T>> { }
+  @FunctionalInterface
+  public interface PluginBuilder<T extends DerivedVariable> {
+    T build(ReferenceMetadata metadata, DerivedVariableSpec spec) throws ValidationException;
+  }
+
+  public static class PluginMap<T extends DerivedVariable> extends HashMap<String, PluginBuilder<T>> { }
 
   private final ReferenceMetadata _metadata;
   private final List<DerivedVariableSpec> _incomingSpecs;
@@ -65,13 +68,13 @@ public class DerivedVariableFactory {
       Map<String, List<T>> typedInstanceMap,
       List<DerivedVariable> allInstanceList) throws ValidationException {
     try {
-      BiFunctionWithException<ReferenceMetadata, DerivedVariableSpec, T> builder = plugins.get(spec.getFunctionName());
+      PluginBuilder<T> builder = plugins.get(spec.getFunctionName());
       if (builder == null) {
         return false;
       }
 
       // create the instance and look up the list to add it to
-      T instance = builder.apply(_metadata, spec);
+      T instance = builder.build(_metadata, spec);
       List<T> byEntityList = typedInstanceMap.computeIfAbsent(instance.getEntityId(), entityId -> new ArrayList<>());
 
       // only add if not already present (prevents infinite loop if circular dependency present)
