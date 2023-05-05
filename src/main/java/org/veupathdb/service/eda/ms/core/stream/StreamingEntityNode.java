@@ -197,21 +197,25 @@ public class StreamingEntityNode extends EntityStream {
   }
 
   protected void applyAncestorVars(EntityStream ancestorStream, Map<String,String> row) {
+
     String ancestorIdColName = ancestorStream.getEntityIdColumnName();
     Predicate<Map<String,String>> isMatch = r -> r.get(ancestorIdColName).equals(row.get(ancestorIdColName));
     Optional<Map<String,String>> ancestorRow = ancestorStream.getPreviousRowIf(isMatch);
+
     // loop through ancestor rows until we find a match for ours
     while (ancestorStream.hasNext() && ancestorRow.isEmpty()) {
       // this row is a member of a new ancestor of this entity; move to the next row
       ancestorStream.next(); // throws away the previous ancestor row because it didn't match ours
       ancestorRow = ancestorStream.getPreviousRowIf(isMatch);
     }
+
     if (ancestorRow.isEmpty()) {
       // Still empty and ancestor stream is exhausted.  We expect every target entity row to
       // have a matching row in each ancestor entity's stream.  Not having one is a fatal error.
       throw new IllegalStateException("Ancestor stream '" + ancestorStream.getStreamSpec().getEntityId() +
           "' could not provide a row matching '" + ancestorIdColName + "' with value '" + row.get(ancestorIdColName) + "'.");
     }
+
     row.putAll(ancestorRow.get());
   }
 
