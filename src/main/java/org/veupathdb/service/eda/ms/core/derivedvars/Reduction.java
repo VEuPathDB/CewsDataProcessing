@@ -65,7 +65,7 @@ public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
   public StreamSpec getInputStreamSpec() {
     // cache this so only created once
     if (_inputStreamSpec == null) {
-      EntityDef entity = _metadata.getEntity(getCommonEntityId()).orElseThrow();
+      EntityDef entity = _metadata.getEntity(getReductionEntityId()).orElseThrow();
       List<VariableDef> idColumns = _metadata.getTabularColumns(entity, Collections.emptyList());
       _inputStreamSpec = new StreamSpec(UUID.randomUUID().toString(), entity.getId())
           .addVars(getRequiredInputVars().stream()
@@ -84,7 +84,7 @@ public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
   @Override
   public void validateDependedVariableLocations() {
     // the common entity of the input vars must be the same as or a descendant of the target entity
-    String inputVarsEntityId = getCommonEntityId();
+    String inputVarsEntityId = getReductionEntityId();
     List<String> ancestorIds = _metadata
         .getAncestors(_metadata.getEntity(inputVarsEntityId).orElseThrow())
         .stream().map(EntityDef::getId).toList();
@@ -93,29 +93,31 @@ public abstract class Reduction<T> extends AbstractDerivedVariable<T> {
     }
   }
 
-  // TODO: using common entity puts a restriction on the vars a reduction can depend on i.e. that they all come
-  //    from the same entity (no inherited vars).  But there's no real reason to impose this restriction since
-  //    reductions produce StreamingEntityNodes that know how to handle inheritance and derived vars.  Thus, a
-  //    better strategy may be to find the "lowest" (farthest from root) entity in the required vars and use that
-  //    entity, then ensure required vars are either that entity or an ancestor and let folks use inherited vars here.
-  private String getCommonEntityId() {
-    // depended vars must all be on the same entity, which must be a descendant of this entity
-    String commonEntityId = null;
+  private String getReductionEntityId() {
+    // depended vars must all be in the same branch of the entity tree; confirm this and find the lowest entity (farthest from root)
+    EntityDef lowestEntity = null;
     for (VariableSpec spec : getRequiredInputVars()) {
-      _metadata.getVariable(spec).orElseThrow(() ->
+
+      // validate the variable
+      VariableDef variable = _metadata.getVariable(spec).orElseThrow(() ->
           new BadRequestException("Input variable for reduction derived var " + getFunctionName() + " does not exist."));
-      if (commonEntityId == null) {
-        commonEntityId = spec.getEntityId();
+
+      // find entity for this variable (entity should always be valid, but need EntityDef to find ancestors)
+      EntityDef entity = _metadata.getEntity(variable.getEntityId()).orElseThrow();
+
+      // if do not yet have a lowest entity or find a lower one in the same branch, assign lowest to this one
+      if (lowestEntity == null || _metadata.isEntityAncestorOf(lowestEntity, entity)) {
+        lowestEntity = entity;
       }
-      else {
-        if (!spec.getEntityId().equals(commonEntityId)) {
-          throw new BadRequestException("Not all input variables for reduction derived var " + getFunctionName() + " come from the same entity.");
-        }
+      else if (!_metadata.isEntityAncestorOf(entity, lowestEntity)) {
+        // entities are not in the same branch; throw exception
+        throw new BadRequestException("Not all input variables for reduction derived var " + getFunctionName() + " are in the same branch of the entity tree.");
       }
+      // else entity is an ancestor of the current lowest, which is fine; keep looking
     }
-    if (commonEntityId == null) {
+    if (lowestEntity == null) {
       throw new IllegalStateException("No required input vars specified in reduction plugin " + getFunctionName());
     }
-    return commonEntityId;
+    return lowestEntity.getId();
   }
 }
