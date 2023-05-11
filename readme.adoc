@@ -1,4 +1,4 @@
-= Example Containerized JaxRS Service
+= EDA Merging Service
 :toc: left
 :source-highlighter: pygments
 :icons: font
@@ -10,463 +10,62 @@ ifdef::env-github[]
 :caution-caption: :fire:
 :warning-caption: :warning:
 endif::[]
-Elizabeth Paige Harper <epharper@upenn.edu>
-v1.0.0
 
-[NOTE]
-This repository is a thin demonstrative wrapper around the
-https://github.com/VEuPathDB/lib-jaxrs-container-core[Core container library],
-for more in depth documentation of available features and config options see
-the core library's readme.
+== Purpose
 
-// TODO: Explain the raml-2-jaxrs / raml-2-json-schema / etc.. and any hacks or weirdness that people may need to know when modifying this project.
+The EDA Merging Service plays the role in the greater EDA service system of merging single-entity
+tabular data streams received from the Subsetting and Compute services into a single tabular stream,
+which still represents a single entity, but which has gathered into it data from potentially many
+other entities.  It also is responsible for the creation of Derived Variable data, which is generated
+using these merged streams.
 
-== Running the Example
+=== Ways Data Can Be Merged
 
-=== Locally
+==== Inherited Variables
 
-==== Prerequisites
+The most basic way data can be merged is through inherited variables.  The entity tree is organized
+in a way such that, as you descend from the root entity, all children have a one-to-one or
+many-to-one relationship with their parent.  This remains true with the application of subset
+filters, as long as the same filters are applied to both entities during Subsetting Service requests.
 
-* Maven
-* NodeJS/NPM
+Because of this, a record of a child entity has a unique parent ID, and a row for that ID is
+guaranteed to be present in a parent entity stream of the same subset as the child.  Thus, one
+can apply a parent's data to a child in a single pass of both streams by adding selected parent
+variables to the tabular row of the child's stream.  This is what the merging service does and is
+known as "inheriting" an ancestor entity's data.
 
-==== Setup & Run
+=== Computed Variables
 
-Environment/dependency setup for local development can be done via the command
-`make install-dev-env`.  This will install the dependencies required to build the
-project.
+The EDA Compute Service asynchonously produces tabular data streams representing data for a single
+entity.  These streams contain newly computed variables, which can be merged into a tabular data
+stream by the Merging Service.  Typically the computed variables' entity matches the target entity
+of the Merging service request; however, computed variables can be applied to any descendant
+entity of the computed variable entity through inheritance (see above).
 
-After the environment has been set up, the project can be built, tested, and
-packaged using `make jar`.
+=== Derived Variables
 
-Starting the server can be done by running `java -jar build/libs/service.jar`.
+Derived Variables are variables that are created in the Merging Service by plugins.  Additional
+plugins can be written against a flexible Java API.  The input to these plugins is a specification
+object whose schema is defined by the plugin.  Using the specification object, a plugin declares a
+set of tabular streams it requires to generated the derived data.  These streams of data are fetched
+from the Subsetting Service and, row-by-row, the plugin is applied to calculate new values.  Some
+variable metadata is also produced by the plugin (any that can be produced without actually visiting
+the data) but other variable metadata (e.g. num unique values) must be generated elsewhere.
 
-[WARNING]
---
-Most projects will require some CLI or environment arguments to run.  For a full
-listing of available options see the
-https://github.com/VEuPathDB/lib-jaxrs-container-core[core container library]
-documentation.
---
+There are two types of Derived Variables:
 
-[NOTE]
---
-All project specific system level dependencies must be installed locally for
-this to work.
---
+==== Transforms
 
-=== In Docker
+Transforms are Derived Variables that take one or more variables on a single entity (or inherited
+from an ancestor) and use their values to produce a new variable on the same entity.  An example of
+this might be numeric addition, where the value of a new variable A is produced by adding the values
+of B and C (B + C), where B and C are existing variables on the same entity or an ancestor.
 
-==== Prerequisites
+==== Reductions
 
-* Docker
-
-* Docker Compose
-
-==== Setup & Run
-
-The project container can be built using `make docker`.  The first build
-of the container will take several minutes.
-
-Running the built container can be done with:
-----
-$ docker-compose -f docker/docker-compose.dev.yml up
-----
-
-[WARNING]
---
-Most projects will require some CLI or environment arguments to run.  For a full
-listing of available options see the
-https://github.com/VEuPathDB/lib-jaxrs-container-core[core container library]
-documentation.  When using docker-compose these options can be
-https://docs.docker.com/compose/environment-variables/[set automatically]
-through the use of a `.env` file.
---
-
-
-//------------------------------------------------------------------------------
-
-
-== Development
-
-To use this project as a template for the development of a new service, use the
-"Use this template" button above to create a new project based off of this repo.
-
-=== Quick Start
-
-. Clone your new project and cd into the cloned directory
-. Run `make install-dev-env cleanup-example`
-. Edit `service.properties` with your service's details.
-. Run `make fix-path` to move the service code to the correct location
-. Edit `api.raml` with your API design
-. Create any necessary types in `docs/schema`
-. Run `make gen-jaxrs` to generate skeleton code
-. Implement the generated service interfaces.
-. Register your services in the `Resources` class.
-. Run `make test` to run any unit tests and verify that things compile.
-
-=== Detailed Overview
-
-==== Environment Prerequisites
-
-NPM:: Required to run https://github.com/raml2html/raml2html[raml2html]
-Maven:: Required to build
-https://github.com/mulesoft-labs/raml-for-jax-rs[raml-to-jaxrs] &
-https://github.com/VEuPathDB/FgpUtil[FgpUtil]
-
-==== Configuration
-
-Configuration for the build is primarily done through the `service.properties`
-file.  Here you can configure the project's name, version, container name,
-Java package structure, etc...
-
-If additional dependencies are required, they will be added to the
-`dependencies.gradle.kts` file.  For information about adding gradle
-dependency declarations see the
-https://docs.gradle.org/current/userguide/declaring_dependencies.html[Gradle docs].
-
-==== API definition
-
-The service api is defined in 2 places initially:
-
-. The `api.raml` file which contains the server endpoints.
-. The `schema` folder which contains type schema definitions. +
-  These files must be valid Raml 1.0 Libraries.footnote:[https://medium.com/raml-api/raml-101-libraries-and-datatypes-fragments-1889b2e82c27[Modular Raml Guide 1]]footnote:[https://www.baeldung.com/modular-raml-includes-overlays-libraries-extensions[Modular Raml Guide 2]]
-
-===== `api.raml`
-
-====== Including Type Definitions
-
-In the `api.raml` file, there is a statement near the top of the file that
-declares the Raml file "uses" `schema/library.raml`.  This is a generated
-file based on the contents of the schema library under `schema`.  The
-`library.raml` file should not be edited directly.
-
-.`api.raml`: `uses` declaration
-[source, yaml, linenums, start=5]
-----
-uses:
-  err: .tools/raml/errors.raml
-  lib: schema/library.raml
-----
-
-The `uses` keyword maps an import alias to the imported library.  This import
-alias is used to access the types defined in that library.  In the case of the
-above example, library types would be available using `lib.\{MyTypeName}`
-
-.`api.raml`: Library type usage.
-[source, yaml, linenums, start=36]
-----
-        body:
-          application/json:
-            type: lib.HelloResponse
-----
-
-===== Type Schema
-
-Each raml library file under `schema` should define a root `types` object
-defining the types used by the API.  The name of the types defined under the
-`types` object will be the name of the generated Java classes based on those
-types.
-
-.Type definition
-====
-{nbsp}
-
-.Schema
-[source, yaml]
-----
-#%RAML 1.0 Library
-types:
-  MyType:
-    properties:
-      foo: string
-----
-
-.Resulting Java Interface
-[source, java]
-----
-package org.veupathdb.service.demo.generated.model;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
-@JsonDeserialize(
-    as = HealthResponseImpl.class
-)
-public interface MyType {
-  @JsonProperty("foo")
-  String getFoo();
-
-  @JsonProperty("foo")
-  void setFoo(String foo);
-}
-----
-
-.Resulting Java Class
-[source, java]
-----
-package org.veupathdb.service.demo.generated.model;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({
-    "foo",
-})
-public class HealthResponseImpl implements HealthResponse {
-  @JsonProperty("foo")
-  private String foo;
-
-  @JsonProperty("foo")
-  public String getFoo() {
-    return this.foo;
-  }
-
-  @JsonProperty("foo")
-  public void setFoo(String foo) {
-    this.foo = foo;
-  }
-}
-----
-====
-
-==== Generating A Service
-
-Once your API spec is complete, you can begin development of Java code by
-running `make gen-jaxrs`.  This will create a skeleton of the API in the
-`generated` source package located under the root package defined using the
-`app.package` values in `service.properties`.
-
-The generated interfaces and types have the basic necessary annotations for use
-by both Jackson and Jersey.
-
-Once you have implemented the interfaces defined under
-`\{source-package}.generated.resources` they must be registered in the
-`\{source-package}.Resources` class.
-
-==== Run Your Service
-
-Running your service locally can be done by following the same steps as defined
-above in the <<Running the Example>> section:
-
-. Run `make jar`
-. Run `java -jar build/libs/service.jar`
-
-Running in Docker can be done by:
-
-. Run `make build-docker`
-. Run `docker run <your-image-name>`
-
-== Other Information
-
-=== Authentication
-
-The base service contains an authentication layer that will be enabled on any
-service class or method annotated with `@Authenticated`.  This authentication
-will validate a WDK user session against the account database and append user
-profile information to the incoming request object.
-
-=== Make Targets
-
-`compile`::
-. Generates code & docs if the API def has changed.
-. Compiles Java code if anything has changed.
-
-`test`::
-. Generates code & docs if the API def has changed.
-. Compiles Java code if necessary.
-. Runs unit tests.
-
-`jar`::
-. Generates code & docs if the API def has changed.
-. Compiles Java code if necessary.
-. Runs unit tests if necessary.
-. Packages a self-contained runnable jar.
-
-`docker`::
-. Runs `docker build` for the project.
-
-`install-dev-env`::
-. Checks for system prerequisites.
-. Downloads and builds raml-to-jaxrs.
-. Installs the Oracle JDBC components into the `vendor` directory.
-. Downloads, builds, and installs the FgpUtil project into the `vendor`
-  directory.
-. Installs the required NPM packages
-
-`gen-jaxrs`::
-. Generates Java code from the Raml spec.
-
-`gen-docs`::
-. Generates API docs from the Raml spec.
-
-`fix-path`::
-. Migrates the source code from the demo package to the correct package as
-  defined in `service.properties`
-
-=== Build Process
-
-Presently the build process is operated through a makefile which calls and sets
-up the necessary prerequisites.  This is a temporary solution to be used until
-
-- https://github.com/VEuPathDB/FgpUtil[FgpUtil] is converted to a Gradle
-  friendly form (via Java9 modularization and package publishing)
-- https://github.com/VEuPathDB/lib-jaxrs-container-build-utils[The build utils]
-  are converted into a gradle library
-- The team as a whole is familiar with Gradle and Docker
-
-==== Generating Jax-RS Code
-
-The `make gen-jaxrs` command is backed by the https://github.com/mulesoft-labs/raml-for-jax-rs[Mulesoft Raml-for-JaxRs library].
-
-===== Hiccups and limitations
-
-The RAML to JaxRS conversion library has the following known issues that are
-likely to impact use of the tool:
-
-Enums::
-+
---
-* Enum generation creates types that do not allow access to the raw backing
-  text, which may be desired when constructing complex responses.
-* Enum generation may cause the generator to fail with cryptic errors involving
-  bad imports for the Java builtin type `String`
---
-+
-One alternative/workaround for this is defining the enum type in Java and typing
-the RAML as string with the possible values defined as examples.
-
-Inheritance::
-
-Extending types can work out for trees with at most 1 parent depth, however
-going beyond that may cause things to generate in a way that has compile errors.
-
-`additionalProperties` aka `//:`::
-
-Using a catchall block for maps with anything other than a simple value type
-will cause the java type to be `Map<String, Object>`.  Additionally even a
-simple value type _may_ have this result.
-
-==== Hacks and Oddities
-
-===== FgpUtil
-
-Due to the fact that FgpUtil is not a Gradle project, in a Maven repo, or safe
-to use with standard imports (due to likelyhood of dependency conflicts), at
-present, this dependency is built separately from the rest of the project by one
-of the make targets and is included as a local, runtime dependency.
-
-Due to this method of including FgpUtil, additional dependencies have been added
-to support it in addition to bridging compatibility issues.
-
-=== Tunnels and Proxies
-
-When developing or testing a service, you may need to provide that service
-access to resources that cannot be reached without a tunnel or proxy.  This is
-complicated by the fact that Docker containers, by default, will not see those
-resources.
-
-To allow Dockerized services access to these external resources, the running
-container(s) must be given access to the host machine's network.  This can be
-done via `docker run` using the
-https://docs.docker.com/engine/reference/run/#network-settings[network mode "host"]
-or via `docker-compose` by setting the
-https://docs.docker.com/compose/compose-file/compose-file-v3/#network_mode[`network_mode`]
-config option to "host".
-
-Binding the containers to your host machine's network will give the containers
-access to your running tunnels/proxies, but will also mean binding all exposed
-container ports to those ports on your host machine which may cause conflicts.
-
-
-=== The project root
-
-The root directory of this project contains multiple standard files used by
-Gradle, Docker, Make, and GitHub, in addition to custom files created for
-developer convenience.
-
-.Root Directory Files
-[cols=".^2,.^1,5", options="header]
-|===
-| File | For | Description
-
-m| .dockerignore
-| Docker
-| Similar to `.gitignore` files, tells Docker to ignore specified file patterns
-  when performing glob copies from the source directory into the container being
-  built.
-
-m| .gitignore
-| Git
-| Tells git to ignore files matching the specified patterns.
-
-m| api.raml
-| RAML
-| API endpoint definition.
-
-m| build.gradle.kts
-| Gradle
-| Standard Gradle build script definition.footnote:[https://docs.gradle.org/current/userguide/tutorial_using_tasks.html[Gradle Basics]]
-  This particular build script uses the https://kotlinlang.org/[Kotlin] DSL for
-  gradle.
-
-m| dependencies.gradle.kts
-| Gradle
-| Custom separation of the project's dependencies into a specialized file to
-  help keep the build script clean.  Imported by `build.gradle.kts`
-
-m| Dockerfile
-| Docker
-| Docker container definition file.footnote:[https://docs.docker.com/engine/reference/builder/[Dockerfile Reference]]
-
-m| gradlew
-| Gradle
-| Standard, autogenerated Gradle script that allows the use of Gradle without
-  requiring the host machine itself to have Gradle installed.
-
-m| makefile
-| Make
-| Temporary wrapper for the build utils until the
-  <<Build Process, required tasks>> are performed which will allow simplifying
-  the build.  See <<Make Targets>> for usage.
-
-m| readme.adoc
-| GitHub
-| https://asciidoctor.org/[Asciidoc] readme file (the source backing this page).
-
-m| service.properties
-| Gradle Build
-| Custom file added to simplify configuring the project build.  This file is
-  read by the Gradle build and controls basic config details about this project,
-  such as the project name and version, generated Docker image name, Java
-  entrypoint class, etc...
-|===
-
-.Root Directory Dirs
-[cols=".^2,.^1,5", options="header]
-|===
-| Directory | For | Description
-
-m| docker/
-| Docker/Docker Compose
-| Contains docker-compose configuration files.
-
-m| gradle/
-| Gradle
-| Contains the backing source for the `gradlew` script in the root directory. +
-  Keeping this directory in your repository is standard practice for Gradle.
-
-m| schema/
-| RAML
-| Contains RAML type definitions imported by the `api.raml` file in the root
-  directory. The `schema/library.raml` file is autogenerated based on the other
-  files present in the schema directory.
-
-m| src/
-|
-| Java source root
-
-|===
+Reductions are Derived Variables that take one or more variables from multiple rows of a descendant
+entity and functionally reduce them to a single value (i.e. iterate over them, applying a reduction
+function to a row and some intermediate values).  An example of this might be to take a numeric
+average or mean: if entity X is a parent of entity Y, and A is a varible of entity Y, then a plugin
+could produce a new variable B on X whose value is the mean of A over Y's child rows of a single
+row of X.
