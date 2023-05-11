@@ -34,7 +34,7 @@ can apply a parent's data to a child in a single pass of both streams by adding 
 variables to the tabular row of the child's stream.  This is what the merging service does and is
 known as "inheriting" an ancestor entity's data.
 
-=== Computed Variables
+==== Computed Variables
 
 The EDA Compute Service asynchonously produces tabular data streams representing data for a single
 entity.  These streams contain newly computed variables, which can be merged into a tabular data
@@ -42,7 +42,7 @@ stream by the Merging Service.  Typically the computed variables' entity matches
 of the Merging service request; however, computed variables can be applied to any descendant
 entity of the computed variable entity through inheritance (see above).
 
-=== Derived Variables
+==== Derived Variables
 
 Derived Variables are variables that are created in the Merging Service by plugins.  Additional
 plugins can be written against a flexible Java API.  The input to these plugins is a specification
@@ -54,14 +54,14 @@ the data) but other variable metadata (e.g. num unique values) must be generated
 
 There are two types of Derived Variables:
 
-==== Transforms
+===== Transforms
 
 Transforms are Derived Variables that take one or more variables on a single entity (or inherited
 from an ancestor) and use their values to produce a new variable on the same entity.  An example of
 this might be numeric addition, where the value of a new variable A is produced by adding the values
 of B and C (B + C), where B and C are existing variables on the same entity or an ancestor.
 
-==== Reductions
+===== Reductions
 
 Reductions are Derived Variables that take one or more variables from multiple rows of a descendant
 entity and functionally reduce them to a single value (i.e. iterate over them, applying a reduction
@@ -69,3 +69,7 @@ function to a row and some intermediate values).  An example of this might be to
 average or mean: if entity X is a parent of entity Y, and A is a varible of entity Y, then a plugin
 could produce a new variable B on X whose value is the mean of A over Y's child rows of a single
 row of X.
+
+=== Design
+
+
