@@ -21,6 +21,13 @@ using these merged streams.
 
 == Ways Data Can Be Merged
 
+=== Native Variables
+
+"Native" is a term used to define variables that belong to the entity in hand in the original study
+data (i.e. loaded into the database or study files), to differentiate them from variables generated
+or gathered through the means below.  The subsetting service provides these variables in its tabular
+responses.
+
 === Inherited Variables
 
 The most basic way data can be merged is through inherited variables.  The entity tree is organized
@@ -86,19 +93,88 @@ A merged tabular request consists of the following elements:
 === Preprocessing
 
 Before generating the response, the merging service gathers required resources.  These include:
-.. Pulling out the elements of the request and saving them off
-.. Subsetting and Compute Service Clients: Objects that make it easy to request data from these services
-.. Study Metadata: Use the study ID in the request to ask Subsetting for the study's metadata
-.. Derived Variable Factory: An object configured with the incoming derived variable specs which can produce dependency-ordered, configured plugin instances
-.. Computed Variable Metadata: Use the passed compute spec to ensure the compute job is complete and request and save off computed variable metadata
+. Pulling out the elements of the request and saving them off
+. Subsetting and Compute Service Clients: Objects that make it easy to request data from these services
+. Study Metadata: Use the study ID in the request to ask Subsetting for the study's metadata
+. Derived Variable Factory: An object configured with the incoming derived variable specs which can produce dependency-ordered, configured plugin instances
+. Computed Variable Metadata: Use the passed compute spec to ensure the compute job is complete and request and save off computed variable metadata
+
+EDA Common's ReferenceMetadata class is the container for entity and variable metadata for a
+single study, and after construction, contains the variables 
 
 === Processing
 
-To serve a merged tabular response, the merging service executes the following steps:
+==== Building an entity stream processing tree
 
+The first step in creating the merged response is to build a tree of nodes through which the data
+will flow.  Each node will process an incoming tabular stream from the subsetting or compute
+services, and thus each node represents an entity in the study's entity tree.  However, the tree
+of processing nodes is not the same shape or size as the study's entity tree.
 
+The root node of of the procecessing tree will process a stream of the request's target entity,
+and is tasked with providing the requested output variables.  The requested output variables for
+any node, including the root, can only belong to that node's entity, or to an ancestor.  The
+root node is also responsible for adding computed vars, which can also belong only to the root
+node's entity or to an ancestor.
 
-=== About Headers
+Any native or transform variables of the requested entity will be added to the result in the root
+node.  Its children will fit into one of two categories:
+
+. Processing nodes representing ancestor entities, from which variables can be inherited.
+. Processing nodes representing descendent entities, from which variables can be reduced.  This
+  case only applies when a reduction derived variable is needed on the parent node.
+
+Each of the child nodes (representing an ancestor or descendent entity) is tasked with providing
+a set of requested output variables as well, assigned by the parent node.  In the case of ancestor
+entity nodes, these will be those variables requested of the root (or required by a transform)
+that natively belong to the ancestor, and will be inherited.  In the case of descendant entity
+nodes, these will be those variables required by a reduction derived variable on the root node.
+
+If the child nodes of the root are asked to provide varibles which are themselves reductions,
+transforms that require inherited varibles, or even more richly nested variable dependencies,
+the child nodes may create their own child nodes to serve this data, recursively, until only
+native variables are needed.
+
+This means there may be multiple streams or the same entity, with the same subset, perhaps even
+with the same variables, requested of subsetting, but this is necessary because the processing
+tree will process those streams at different rates and at different locations in the processing
+tree.
+
+Computed variables are brought in on a single stream (only one compute's tabular result can
+be merged per request), and the computed entity must be the same as, or an ancestor of, the
+request's target entity.  This stream is treated as a special sibling stream to the target entity,
+or as a regular ancestor stream.
+
+==== Requesting and Distributing Tabular Data Streams
+
+Once the processing tree has been created, it is asked to provide a set of StreamSpec objects,
+each of which is either the (singular) request to the compute service, or defines a request to
+be passed to the subsetting service.  StreamSpecs contain:
+
+. ID (name) of the stream
+. Required entity ID
+. IDs of required variables
+. Subset filters (some derived variable plugins may override the primary subset)
+
+Each node in the tree defines a StreamSpec for the tabular stream it will process.  Each
+StreamSpec is used to create a request to the tabular endpoints in subsetting or compute services,
+which return a binary data stream.  These requests are made in parallel and their responses
+are collected into a map from stream ID (name) to InputStream.
+
+If only a single stream is required (meaning the tree is only a single node), and no operations
+need to be performed on the data (i.e. no transform derived vars), then the processing tree
+is bypassed and the stream is transferred directly as the tabular response (with rewritten
+headers; see below).
+
+Otherwise, the InputStream map is passed to the processing tree, where each node claims the
+InputStream associated with its StreamSpec.  The tree is now ready to deliver data.
+
+==== Streaming the Merged Data
+
+Each node in the processing tree is an iterator over a Map<String,String> containing the data
+for a single row (key is dot-notated variable spec).
+
+=== A Note About Headers
 
 The header line of the merging service's tabular response consists of an ID column for the target
 entity and each of its ancestors (in that order, up the tree), data columns for each of the
@@ -108,4 +184,7 @@ compute job.
 The format of the header is different for incoming vs outgoing streams.  Because the compute and
 subsetting services serve tabular responses for a single entity, their headers consist of only the
 variable ID (no entity IDs).  However, a merging tabular response could have columns for multiple
-entities (via inheritance), so we encode them in the format "<entity_id>.<variable_id>".
+entities (via inheritance), so they are encoded in the format "${entity_id}.${variable_id}".  ID
+columns in merging responses use the entity ID they are the primary key for (e.g. even though a
+participant record has a household ID, the household ID column's header will be household.household_id,
+not participant.household_id.
