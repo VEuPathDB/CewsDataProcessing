@@ -121,10 +121,10 @@ Any native or transform variables of the requested entity will be added to the r
 node.  Its children will fit into one of two categories:
 
 . Processing nodes representing ancestor entities, from which variables can be inherited.
-. Processing nodes representing descendent entities, from which variables can be reduced.  This
+. Processing nodes representing descendant entities, from which variables can be reduced.  This
   case only applies when a reduction derived variable is needed on the parent node.
 
-Each of the child nodes (representing an ancestor or descendent entity) is tasked with providing
+Each of the child nodes (representing an ancestor or descendant entity) is tasked with providing
 a set of requested output variables as well, assigned by the parent node.  In the case of ancestor
 entity nodes, these will be those variables requested of the root (or required by a transform)
 that natively belong to the ancestor, and will be inherited.  In the case of descendant entity
@@ -172,7 +172,22 @@ InputStream associated with its StreamSpec.  The tree is now ready to deliver da
 ==== Streaming the Merged Data
 
 Each node in the processing tree is an iterator over a Map<String,String> containing the data
-for a single row (key is dot-notated variable spec).
+for a single row (key is dot-notated variable spec).  This includes the root node, which is
+specially built to return a row with only the variables asked for in the original request, and
+in the order they were requested.
+
+To produce its row, each node, including the root, firs reads the row of native variables of its
+entity.  It then inherits any variables produced by its child nodes which represent ancestor
+entities.  Then it executes any configured reduction derived variables it needs by iterating
+over the rows in its child nodes which represent descendant entites.  Finally, it executes any
+configured transform derived variable plugins to create the remaining values.  Its list of
+derived variable instances is pre-ordered by dependency so that any transform value is computed
+only after its dependencies are computed.  Circular dependencies are checked in advance and
+throw a 400.
+
+Once a node has produced all the variable values requested of it, it returns the output Map
+for that row from its `next()` method, and its parent node, or the response formatter,
+consumes the row.
 
 === A Note About Headers
 
