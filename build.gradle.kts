@@ -98,9 +98,9 @@ tasks.named("merge-raml") {
     if (edaCommonLocalProjectDir != null) {
       val commonRamlFile = File("${edaCommonLocalProjectDir}/schema/library.raml")
       logger.lifecycle("Copying file from ${commonRamlFile.path} to ${commonRamlOutFile.path}")
-      commonRamlFile.copyTo(commonRamlOutFile);
+      commonRamlFile.copyTo(commonRamlOutFile)
     } else {
-      commonRamlOutFile.createNewFile();
+      commonRamlOutFile.createNewFile()
       val edaCommonRamlUrl = "https://raw.githubusercontent.com/VEuPathDB/EdaCommon/v${edaCommon}/schema/library.raml"
       logger.lifecycle("Downloading file contents from $edaCommonRamlUrl")
       URL(edaCommonRamlUrl).openStream().use { it.transferTo(FileOutputStream(commonRamlOutFile)) }
@@ -142,8 +142,8 @@ dependencies {
   implementation("org.glassfish.jersey.core:jersey-server:3.1.1")
 
   // Jackson
-  implementation("com.fasterxml.jackson.core:jackson-databind:2.14.2")
-  implementation("com.fasterxml.jackson.core:jackson-annotations:2.14.2")
+  implementation("com.fasterxml.jackson.core:jackson-databind:2.15.1")
+  implementation("com.fasterxml.jackson.core:jackson-annotations:2.15.1")
 
   // Log4J
   implementation("org.apache.logging.log4j:log4j-api:2.20.0")
