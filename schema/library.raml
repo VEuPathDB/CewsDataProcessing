@@ -240,6 +240,14 @@ types:
       filters: API_Filter[]
       binSpec?: BinSpecWithRange
       valueSpec: ValueSpec
+  VocabByRootEntityPostRequest:
+    type: object
+    additionalProperties: false
+    properties:
+      filters: API_Filter[]
+  VocabByRootEntityPostResponse:
+    type: EntityTabularPostResponse
+    additionalProperties: false
   HistogramBin:
     type: object
     additionalProperties: false
@@ -300,6 +308,7 @@ types:
       sourceType: StudySourceType
       displayName: string
       shortDisplayName: string
+      lastModified: datetime
       description: string
   EntityIdGetResponse:
     type: object
@@ -342,6 +351,7 @@ types:
       - number
       - date
       - integer
+      - string
   API_NumberCollection:
     type: API_Collection
     discriminatorValue: number
@@ -360,6 +370,9 @@ types:
     discriminatorValue: date
     properties:
       distributionDefaults: API_DateDistributionDefaults
+  API_StringCollection:
+    type: API_Collection
+    discriminatorValue: string
   API_Variable:
     type: object
     discriminator: type
@@ -414,6 +427,12 @@ types:
       - geoaggregator
       - latitude
       - longitude
+  API_VariableScale:
+    type: string
+    enum:
+      - log
+      - log2
+      - ln
   API_VariablesCategory:
     type: API_Variable
     discriminatorValue: category
@@ -470,8 +489,9 @@ types:
     discriminatorValue: number
     properties:
       distributionDefaults: API_NumberDistributionDefaults
-      units: string
+      units?: string
       precision: number
+      scale?: API_VariableScale
   API_IntegerVariable:
     type: API_VariableWithValues
     discriminatorValue: integer
