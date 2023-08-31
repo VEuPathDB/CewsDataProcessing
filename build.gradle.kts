@@ -79,7 +79,7 @@ repositories {
 
 // versions
 val coreLib       = "6.16.0"         // Container core lib version
-val edaCommon     = "10.9.0"         // EDA Common version
+val edaCommon     = "11.2.0"         // EDA Common version
 val fgputil       = "2.12.9-jakarta" // FgpUtil version
 
 // use local EdaCommon compiled schema if project exists, else use released version;
@@ -133,6 +133,11 @@ dependencies {
   implementation("org.gusdb:fgputil-db:${fgputil}")
   implementation("org.gusdb:fgputil-client:${fgputil}")
 
+  // Graal for JS execution
+  implementation("org.graalvm.js:js:22.3.2")
+  implementation("org.graalvm.js:js-scriptengine:22.3.2")
+  implementation("org.graalvm.sdk:graal-sdk:22.3.2")
+  implementation("org.graalvm.truffle:truffle-api:22.3.2")
   // Jersey
   implementation("org.glassfish.jersey.core:jersey-server:3.1.1")
 

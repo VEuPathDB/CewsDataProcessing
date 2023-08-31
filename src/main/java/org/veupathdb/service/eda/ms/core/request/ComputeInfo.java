@@ -1,4 +1,4 @@
-package org.veupathdb.service.eda.ms.core;
+package org.veupathdb.service.eda.ms.core.request;
 
 import org.veupathdb.service.eda.common.client.EdaComputeClient;
 import org.veupathdb.service.eda.generated.model.ComputedVariableMetadata;
@@ -6,6 +6,11 @@ import org.veupathdb.service.eda.generated.model.VariableMapping;
 
 import java.util.List;
 
+/**
+ * Encapsulates information about a requested compute.  This includes compute information provided by the incoming
+ * request (compute name and config) and compute metadata information fetched from the compute service about the job
+ * itself (computed entity and computed variables).
+ */
 public class ComputeInfo {
 
   // final values set by config

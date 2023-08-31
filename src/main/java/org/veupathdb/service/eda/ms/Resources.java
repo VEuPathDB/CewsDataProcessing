@@ -16,10 +16,11 @@ import static org.gusdb.fgputil.runtime.Environment.getRequiredVar;
 public class Resources extends ContainerResources {
 
   private static final boolean DEVELOPMENT_MODE =
-      Boolean.valueOf(getOptionalVar("DEVELOPMENT_MODE", "false"));
+      Boolean.parseBoolean(getOptionalVar("DEVELOPMENT_MODE", "false"));
 
   public static final String SUBSETTING_SERVICE_URL = getRequiredVar("SUBSETTING_SERVICE_URL");
   public static final String COMPUTE_SERVICE_URL = getRequiredVar("COMPUTE_SERVICE_URL");
+  public static final String DATASET_ACCESS_SERVICE_URL = getRequiredVar("DATASET_ACCESS_SERVICE_URL");
 
   public Resources(Options opts) {
     super(opts);
@@ -37,7 +38,8 @@ public class Resources extends ContainerResources {
   @Override
   protected Object[] resources() {
     return new Object[] {
-      Service.class,
+      ServiceInternal.class,
+      ServiceExternal.class
     };
   }
 }
