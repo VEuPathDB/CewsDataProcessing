@@ -67,6 +67,7 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
     computeStreamSpec.ifPresent(fullOutputVarDefs::addAll);
 
     _outputVars = getOrderedOutputColumns(fullOutputVarDefs);
+    LOG.info("Root stream final output vars: " + String.join(", ", _outputVars));
     _outputRow = new InitialSizeStringMap.Builder(_outputVars).build();
   }
 
