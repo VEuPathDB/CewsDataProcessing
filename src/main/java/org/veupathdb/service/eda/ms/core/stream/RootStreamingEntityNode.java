@@ -180,4 +180,7 @@ public class RootStreamingEntityNode extends StreamingEntityNode {
         "}" + NL;
   }
 
+  public String[] getOrderedOutputVars() {
+    return _outputVars;
+  }
 }

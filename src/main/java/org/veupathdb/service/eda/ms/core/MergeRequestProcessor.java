@@ -83,7 +83,7 @@ public class MergeRequestProcessor {
       ConsumerWithException<Map<String,InputStream>> streamProcessor =
           targetStream.requiresNoDataManipulation()
           ? dataStreams -> writePassThroughStream(outputVars, dataStreams.values().iterator().next(), out)
-          : dataStreams -> writeMergedStream(targetStream, outputVars, dataStreams, out);
+          : dataStreams -> writeMergedStream(targetStream, dataStreams, out);
 
       // build and process streams
       StreamingDataClient.buildAndProcessStreams(new ArrayList<>(requiredStreams.values()), streamGenerator, streamProcessor);
@@ -108,7 +108,7 @@ public class MergeRequestProcessor {
     }
   }
 
-  private static void writeMergedStream(RootStreamingEntityNode targetEntityStream, List<VariableSpec> outputVars, Map<String, InputStream> dataStreams, OutputStream out) {
+  private static void writeMergedStream(RootStreamingEntityNode targetEntityStream, Map<String, InputStream> dataStreams, OutputStream out) {
 
     LOG.info("All requested streams (" + dataStreams.size() + ") ready for consumption");
 
@@ -122,7 +122,7 @@ public class MergeRequestProcessor {
     try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
 
       // write the header row
-      String headerRow = String.join(TAB, VariableDef.toDotNotation(outputVars));
+      String headerRow = String.join(TAB, targetEntityStream.getOrderedOutputVars());
       LOG.info("Writing header row:" + headerRow);
       writer.write(headerRow);
       writer.newLine();
