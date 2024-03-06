@@ -97,8 +97,6 @@ public class ServiceExternal implements Merging {
 
 
   static Entry<String, String> getAuthHeader(ContainerRequest request) {
-    LOG.info("All headers: " + request.getHeaders());
-    LOG.info("All property names: " + request.getPropertyNames());
     return UserProvider.getSubmittedAuth(request)
         .orElseThrow(() -> new BadRequestException(MISSING_AUTH_MSG));
   }
