@@ -34,7 +34,7 @@ public class ServiceExternal implements Merging {
 
   private static final String MISSING_AUTH_MSG =
       "Request must include authentication information in the form of a " +
-          RequestKeys.AUTH_HEADER + " header or query param";
+          RequestKeys.BEARER_TOKEN_HEADER + " header or query param";
 
   @Context
   ContainerRequest _request;
